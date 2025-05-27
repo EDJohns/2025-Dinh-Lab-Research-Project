@@ -1,0 +1,957 @@
+---
+title: "Fig1"
+author: "Athena Golfinos-Owens"
+date: "2024-12-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+color_clusters <- c("#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72", "#B17BA6", "#FF7F00", "#FDB462", 
+                    "#E7298A", "#E78AC3","#33A02C", "#B2DF8A", "#55A1B1", "#8DD3C7", "#A6761D", "#E6AB02", 
+                    "#7570B3", "#BEAED4", "#666666", "#999999", "#AA8282", "#D4B7B7", "#8600BF", "#BA5CE3", 
+                    "#808000","#AEAE5C", "#1E90FF", "#00BFFF", "#56FF0D", "#FFFF00")
+
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(colorspace)
+library(cowplot)
+library(tidyverse)
+library(DescTools)
+library(SPOTlight)
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
+
+# Print the current working directory (optional, for verification) 
+print(getwd())
+```
+
+## Object load-in
+```{r}
+# loading in necessary objects
+load("/Volumes/hqdinh2/Projects/2.HNC_SPORE_SingleCell_Spatial/CosMX_TMA/Protein-data/Analysis/CosMX_protein_annot_cluster.rda")
+load("/Volumes/hqdinh2/Projects/!GEO_Dryad_Submissions/Golfinos_Owen_et_al_HNSCC_ICI/SeuratObjects_dataFrames/CosMX_RNA_merged.rda")
+load('/Volumes/hqdinh2/Projects/!GEO_Dryad_Submissions/Golfinos_Owen_et_al_HNSCC_ICI/SeuratObjects_dataFrames/8_Visium.rda')
+scdc <- read.csv('/Volumes/hqdinh2/Lab_Manuscripts/INPREP_HNC_ICB_GolfinosOwens_etal_2025/Visium_figures/SCDC_compartment_proportions.csv') %>% 
+  select(c(Cell_Type, Proportion, Sample_Name, Response))
+load('/Volumes/hqdinh2/Projects/HNC_SPORE/Seurat_Objs/HNC_human/hnc_myeloid_2021.rda')
+load('/Volumes/hqdinh2/Lab_Manuscripts/INPREP_HNC_ICB_GolfinosOwens_etal_2025/objects/bill_luoma_consensus.rda')
+```
+
+# TEST CosMx protein recluster (grouping transferred clusters with parent population)
+```{r}
+DimPlot(CosMx_Protein_log_norm, group.by = 'merged_annot_cluster', raster = F)
+
+tumor_protein <- CosMx_Protein_log_norm[,grep('Tumor', CosMx_Protein_log_norm$merged_annot_cluster)]
+tumor_protein <- FindClusters(tumor_protein, resolution = 0.01)
+
+DimPlot(tumor_protein, group.by = 'Protein_snn_res.0.01', raster = F, label = T)
+
+Idents(tumor_protein) <- 'Protein_snn_res.0.01'
+
+#DotPlot(tumor_protein, features = c('FOXP3', 'CD3', 'CD15', 'CD31', 'CD56', 'GZMB', 'CD163', 'CD11b', 'EpCAM', 'panRAS', 'Beta-catenin'), col.min = 0)
+#VlnPlot(tumor_protein, features = c('FOXP3', 'CD3', 'CD15', 'CD31', 'CD56', 'GZMB', 'CD163', 'CD11b', 'EpCAM', 'panRAS', 'Beta-catenin'), raster = F)
+
+
+
+tregs <- colnames(tumor_protein)[grep('10|14', tumor_protein$Protein_snn_res.0.01)]
+endo <- colnames(tumor_protein)[tumor_protein$Protein_snn_res.0.01 %in% c(6, 9, 19, 28)]
+nk <- colnames(tumor_protein)[tumor_protein$Protein_snn_res.0.01 %in% c(15, 27)]
+tcells <- colnames(tumor_protein)[tumor_protein$Protein_snn_res.0.01 %in% c(17, 21, 22, 23, 24)]
+neut <- colnames(tumor_protein)[tumor_protein$Protein_snn_res.0.01 %in% c(4, 5, 7, 13, 16, 18)]
+mac <- colnames(tumor_protein)[tumor_protein$Protein_snn_res.0.01 %in% c(3, 28, 21, 12, 11)]
+
+CosMx_Protein_log_norm$merged_annot_cluster[colnames(CosMx_Protein_log_norm) %in% c(tregs)] <- 'Tregs'
+CosMx_Protein_log_norm$merged_annot_cluster[colnames(CosMx_Protein_log_norm) %in% c(endo)] <- 'Endothelial_cells'
+CosMx_Protein_log_norm$merged_annot_cluster[colnames(CosMx_Protein_log_norm) %in% c(nk)] <- 'NK_cells'
+CosMx_Protein_log_norm$merged_annot_cluster[colnames(CosMx_Protein_log_norm) %in% c(tcells)] <- 'Tcells'
+CosMx_Protein_log_norm$merged_annot_cluster[colnames(CosMx_Protein_log_norm) %in% c(neut)] <- 'Neutrophils'
+CosMx_Protein_log_norm$merged_annot_cluster[colnames(CosMx_Protein_log_norm) %in% c(mac)] <- 'Macrophages'
+
+table(CosMx_Protein_log_norm$merged_annot_cluster)
+
+#          B_cells       CD4+T_cells       CD8+T_cells               DCs Endothelial_cells  Fibroblasts/SMCs       Macrophages         Monocytes       Neutrophils          NK_cells 
+#             9783              9344              7815              7339             15918             39678             15686              6058              4789               223 
+#     Plasma_cells             Tregs       Tumor_cells 
+#            12443              4340            139189 
+
+CosMx_Protein_log_norm$merged_annot_cluster <- factor(CosMx_Protein_log_norm$merged_annot_cluster, 
+                            levels=c("Tumor_cells",
+                                     "Fibroblasts/SMCs", 
+                                     "Endothelial_cells", 
+                                     "Plasma_cells", 
+                                     "B_cells",
+                                     "Tregs", 
+                                     'Tcells',
+                                     "CD8+T_cells", 
+                                     "CD4+T_cells", 
+                                     "NK_cells", 
+                                     "Neutrophils", 
+                                     "DCs", 
+                                     "Macrophages", 
+                                     "Monocytes"))
+Idents(CosMx_Protein_log_norm) <- 'merged_annot_cluster'
+
+# pick out representative markers per cluster
+features <- c('panRAS', 'EpCAM', 'Beta-catenin', 'SMA', 'VIM', 'CD31', 'FCN1', 'S100A8', 'S100A9', 'VCAN', 'CD14', 'CD16', 'CD163','CD68', 'HLA-DRA', 'CD11c', 'CCR7', 'CD15', 'CD11b',
+              'CD56', 'GZMB', 'CD3', 'CD4', 'CD8', 'FOXP3', 'CTLA4', 'CD19', 'CD20', 'CD38', 'CD138')
+DotPlot_aeg <- function (object, features, assay = NULL, cols = c("lightgrey", 
+                                                                  "blue"), col.min = -2.5, col.max = 2.5, dot.min = 0, dot.scale = 6, 
+                         idents = NULL, group.by = NULL, split.by = NULL, cluster.idents = FALSE, 
+                         scale = TRUE, scale.by = "radius", scale.min = NA, scale.max = NA) 
+{
+  assay <- assay %||% DefaultAssay(object = object)
+  DefaultAssay(object = object) <- assay
+  split.colors <- !is.null(x = split.by) && !any(cols %in% 
+                                                   rownames(x = brewer.pal.info))
+  scale.func <- switch(EXPR = scale.by, size = scale_size, 
+                       radius = scale_radius, stop("'scale.by' must be either 'size' or 'radius'"))
+  feature.groups <- NULL
+  if (is.list(features) | any(!is.na(names(features)))) {
+    feature.groups <- unlist(x = sapply(X = 1:length(features), 
+                                        FUN = function(x) {
+                                          return(rep(x = names(x = features)[x], each = length(features[[x]])))
+                                        }))
+    if (any(is.na(x = feature.groups))) {
+      warning("Some feature groups are unnamed.", call. = FALSE, 
+              immediate. = TRUE)
+    }
+    features <- unlist(x = features)
+    names(x = feature.groups) <- features
+  }
+  cells <- unlist(x = CellsByIdentities(object = object, cells = colnames(object[[assay]]), 
+                                        idents = idents))
+  data.features <- FetchData(object = object, vars = features, 
+                             cells = cells)
+  data.features$id <- if (is.null(x = group.by)) {
+    Idents(object = object)[cells, drop = TRUE]
+  }
+  else {
+    object[[group.by, drop = TRUE]][cells, drop = TRUE]
+  }
+  if (!is.factor(x = data.features$id)) {
+    data.features$id <- factor(x = data.features$id)
+  }
+  id.levels <- levels(x = data.features$id)
+  data.features$id <- as.vector(x = data.features$id)
+  if (!is.null(x = split.by)) {
+    splits <- FetchData(object = object, vars = split.by)[cells, 
+                                                          split.by]
+    if (split.colors) {
+      if (length(x = unique(x = splits)) > length(x = cols)) {
+        stop(paste0("Need to specify at least ", length(x = unique(x = splits)), 
+                    " colors using the cols parameter"))
+      }
+      cols <- cols[1:length(x = unique(x = splits))]
+      names(x = cols) <- unique(x = splits)
+    }
+    data.features$id <- paste(data.features$id, splits, 
+                              sep = "_")
+    unique.splits <- unique(x = splits)
+    id.levels <- paste0(rep(x = id.levels, each = length(x = unique.splits)), 
+                        "_", rep(x = unique(x = splits), times = length(x = id.levels)))
+  }
+  data.plot <- lapply(X = unique(x = data.features$id), FUN = function(ident) {
+    data.use <- data.features[data.features$id == ident, 
+                              1:(ncol(x = data.features) - 1), drop = FALSE]
+    avg.exp <- apply(X = data.use, MARGIN = 2, FUN = function(x) {
+      return(mean(x = expm1(x = x)))
+    })
+    pct.exp <- apply(X = data.use, MARGIN = 2, FUN = PercentAbove, 
+                     threshold = 0)
+    return(list(avg.exp = avg.exp, pct.exp = pct.exp))
+  })
+  names(x = data.plot) <- unique(x = data.features$id)
+  if (cluster.idents) {
+    mat <- do.call(what = rbind, args = lapply(X = data.plot, 
+                                               FUN = unlist))
+    mat <- scale(x = mat)
+    id.levels <- id.levels[hclust(d = dist(x = mat))$order]
+  }
+  data.plot <- lapply(X = names(x = data.plot), FUN = function(x) {
+    data.use <- as.data.frame(x = data.plot[[x]])
+    data.use$features.plot <- rownames(x = data.use)
+    data.use$id <- x
+    return(data.use)
+  })
+  data.plot <- do.call(what = "rbind", args = data.plot)
+  if (!is.null(x = id.levels)) {
+    data.plot$id <- factor(x = data.plot$id, levels = id.levels)
+  }
+  ngroup <- length(x = levels(x = data.plot$id))
+  if (ngroup == 1) {
+    scale <- FALSE
+    warning("Only one identity present, the expression values will be not scaled", 
+            call. = FALSE, immediate. = TRUE)
+  }
+  else if (ngroup < 5 & scale) {
+    warning("Scaling data with a low number of groups may produce misleading results", 
+            call. = FALSE, immediate. = TRUE)
+  }
+  avg.exp.scaled <- sapply(X = unique(x = data.plot$features.plot), 
+                           FUN = function(x) {
+                             data.use <- data.plot[data.plot$features.plot == 
+                                                     x, "avg.exp"]
+                             if (scale) {
+                               data.use <- scale(x = log1p(data.use))
+                               data.use <- MinMax(data = data.use, min = col.min, 
+                                                  max = col.max)
+                             }
+                             else {
+                               data.use <- log1p(x = data.use)
+                             }
+                             return(data.use)
+                           })
+  avg.exp.scaled <- as.vector(x = t(x = avg.exp.scaled))
+  if (split.colors) {
+    avg.exp.scaled <- as.numeric(x = cut(x = avg.exp.scaled, 
+                                         breaks = 20))
+  }
+  data.plot$avg.exp.scaled <- avg.exp.scaled
+  data.plot$features.plot <- factor(x = data.plot$features.plot, 
+                                    levels = features)
+  data.plot$pct.exp[data.plot$pct.exp < dot.min] <- NA
+  data.plot$pct.exp <- data.plot$pct.exp * 100
+  if (split.colors) {
+    splits.use <- unlist(x = lapply(X = data.plot$id, FUN = function(x) sub(paste0(".*_(", 
+                                                                                   paste(sort(unique(x = splits), decreasing = TRUE), 
+                                                                                         collapse = "|"), ")$"), "\\1", x)))
+    data.plot$colors <- mapply(FUN = function(color, value) {
+      return(colorRampPalette(colors = c("grey", color))(20)[value])
+    }, color = cols[splits.use], value = avg.exp.scaled)
+  }
+  color.by <- ifelse(test = split.colors, yes = "colors", 
+                     no = "avg.exp.scaled")
+  if (!is.na(x = scale.min)) {
+    data.plot[data.plot$pct.exp < scale.min, "pct.exp"] <- scale.min
+  }
+  if (!is.na(x = scale.max)) {
+    data.plot[data.plot$pct.exp > scale.max, "pct.exp"] <- scale.max
+  }
+  if (!is.null(x = feature.groups)) {
+    data.plot$feature.groups <- factor(x = feature.groups[data.plot$features.plot], 
+                                       levels = unique(x = feature.groups))
+  }
+  plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", 
+                                                        y = "id")) + geom_point(mapping = aes_string(size = "pct.exp", 
+                                                                                                     color = color.by)) + scale.func(range = c(0, dot.scale), 
+                                                                                                                                     limits = c(scale.min, scale.max)) + theme(axis.title.x = element_blank(), 
+                                                                                                                                                                               axis.title.y = element_blank()) + guides(size = guide_legend(title = "% Exp")) + 
+    labs(x = "", y = ifelse(test = is.null(x = split.by), 
+                            yes = "", no = "Split Identity")) + theme_cowplot()
+  if (!is.null(x = feature.groups)) {
+    plot <- plot + facet_grid(facets = ~feature.groups, 
+                              scales = "free_x", space = "free_x", switch = "y") + 
+      theme(panel.spacing = unit(x = 1, units = "lines"), 
+            strip.background = element_blank())
+  }
+  if (split.colors) {
+    plot <- plot + scale_color_identity()
+  }
+  else if (length(x = cols) == 1) {
+    plot <- plot + scale_color_distiller(palette = cols)
+  }
+  else {
+    plot <- plot + scale_color_gradient(low = cols[1], high = cols[2])
+  }
+  if (!split.colors) {
+    plot <- plot + guides(color = guide_colorbar(title = "Avg Exp"))
+  }
+  return(plot)
+}
+
+DotPlot_aeg(CosMx_Protein_log_norm, group.by = 'merged_annot_cluster', features = features, col.min = 0, cols = c('lightgray', 'red')) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + coord_flip()
+ggsave('TESTING_CosMx_Protein_DE_genes.pdf', width = 6, height = 6)
+```
+
+## Figure 1b (CosMx RNA)
+```{r}
+DimPlot(CosMX_RNA_merged, group.by = 'annot_cluster2', split.by = 'Response', cols = color_clusters, raster = F) + ggtitle('')
+ggsave('cosMX_RNA.pdf', width = 7, height = 3.5)
+```
+
+## Figure 1b (CosMx RNA)
+```{r}
+df <- as.data.frame(table(CosMX_RNA_merged$Response, CosMX_RNA_merged$annot_cluster2))
+
+df2 <- df %>%
+  group_by(Var1) %>%
+  mutate(Percentage = Freq / sum(Freq) * 100) %>%
+  ungroup()
+
+df2 %>%
+  group_by(Var1) %>%
+  summarise(TotalPercentage = sum(Percentage))
+# Var1  TotalPercentage
+# <fct>           <dbl>
+# 1 NR                100
+# 2 R                 100
+
+# Create a named vector for the color palette based on unique Var2 values
+unique_var2 <- unique(df2$Var2)
+color_palette <- setNames(color_clusters[seq_along(unique_var2)], unique_var2)
+
+# Create the plot
+ggplot(df2, aes(x = Var1, y = Percentage, fill = Var2)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = color_palette) +
+  labs(title = "CosMx RNA cell type percentage by ICB response",
+       x = "Group",
+       y = "Percentage of all cells",
+       fill = "Category") +
+  theme_classic()
+```
+
+# Table of TMA core by patient ID
+```{r}
+meta <- CosMX_RNA_merged[[c('tma_fov_id', 'PatientID')]]
+meta <- unique(meta)
+
+write.csv(meta, file = 'CosMx_PatientID_TMA_CORE.csv')
+```
+
+
+## Figure 1a (CosMx protein)
+```{r}
+# UMAP 
+DimPlot(CosMx_Protein_log_norm, group.by = 'merged_annot_cluster', split.by = 'Response', cols = color_clusters,
+        raster = F) + ggtitle('')
+ggsave('cosmx_protein.pdf', width = 7, height = 3.5)
+```
+
+## Figure 1a (CosMx protein)
+```{r}
+df <- as.data.frame(table(CosMx_Protein_log_norm$Response, CosMx_Protein_log_norm$merged_annot_cluster))
+
+df2 <- df %>%
+  group_by(Var1) %>%
+  mutate(Percentage = Freq / sum(Freq) * 100) %>%
+  ungroup()
+
+df2 %>%
+  group_by(Var1) %>%
+  summarise(TotalPercentage = sum(Percentage))
+# Var1  TotalPercentage
+# <fct>           <dbl>
+# 1 NR                100
+# 2 R                 100
+
+
+# Define your custom color palette
+color_clusters <- c("#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72",
+                    "#B17BA6", "#FF7F00", "#FDB462", "#E7298A", "#E78AC3",
+                    "#33A02C", "#B2DF8A", "#55A1B1", "#8DD3C7", "#A6761D",
+                    "#E6AB02", "#7570B3", "#BEAED4", "#666666", "#999999",
+                    "#AA8282", "#D4B7B7", "#8600BF", "#BA5CE3", "#808000",
+                    "#AEAE5C", "#1E90FF", "#00BFFF", "#56FF0D", "#FFFF00")
+
+# Create a named vector for the color palette based on unique Var2 values
+unique_var2 <- unique(df2$Var2)
+color_palette <- setNames(color_clusters[seq_along(unique_var2)], unique_var2)
+
+# Create the plot
+ggplot(df2, aes(x = Var1, y = Percentage, fill = Var2)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = color_palette) +
+  labs(title = "CosMx protein cell type percentage by ICB response",
+       x = "Group",
+       y = "Percentage of all cells",
+       fill = "Category") +
+  theme_classic()
+
+
+# find the frequency of immune cells per patient
+
+df <- as.data.frame(table(CosMx_Protein_log_norm$merged_annot_cluster, CosMx_Protein_log_norm$tma_fov_id))
+
+df2 <- df %>%
+  group_by(Var2) %>%
+  mutate(Percentage = Freq / sum(Freq) * 100) %>%
+  ungroup()
+
+df2 %>%
+  group_by(Var2) %>%
+  summarise(TotalPercentage = sum(Percentage))
+
+# find the average of each cell type
+df3 <- df2 %>%
+  mutate(Var1 = case_when(
+    Var1 %in% c("Tumor_cells", "Fibroblasts/SMCs", "Endothelial_cells") ~ Var1,
+    TRUE ~ "Immune_cells"
+  )) %>%
+  group_by(Var1) %>%
+summarize(Percentage = mean(Percentage))
+ggsave('Celltype_by_ICB_protein.pdf')
+```
+
+## Figure 1a (CosMx protein)
+```{r}
+CosMx_Protein_log_norm$merged_annot_cluster <- factor(CosMx_Protein_log_norm$merged_annot_cluster, 
+                            levels=c("Tumor_cells",
+                                     "Fibroblasts/SMCs", 
+                                     "Endothelial_cells", 
+                                     "Plasma_cells", 
+                                     "B_cells",
+                                     "Tregs", 
+                                     "CD8+T_cells", 
+                                     "CD4+T_cells", 
+                                     "NK_cells", 
+                                     "Neutrophils", 
+                                     "DCs", 
+                                     "Macrophages", 
+                                     "Monocytes"))
+Idents(CosMx_Protein_log_norm) <- 'merged_annot_cluster'
+
+# pick out representative markers per cluster
+features <- c('panRAS', 'EpCAM', 'Beta-catenin', 'SMA', 'VIM', 'CD31', 'FCN1', 'S100A8', 'S100A9', 'VCAN', 'CD14', 'CD16', 'CD163','CD68', 'HLA-DRA', 'CD11c', 'CCR7', 'CD15', 'CD11b',
+              'CD56', 'GZMB', 'CD3', 'CD4', 'CD8', 'FOXP3', 'CTLA4', 'CD19', 'CD20', 'CD38', 'CD138')
+DotPlot_aeg <- function (object, features, assay = NULL, cols = c("lightgrey", 
+                                                                  "blue"), col.min = -2.5, col.max = 2.5, dot.min = 0, dot.scale = 6, 
+                         idents = NULL, group.by = NULL, split.by = NULL, cluster.idents = FALSE, 
+                         scale = TRUE, scale.by = "radius", scale.min = NA, scale.max = NA) 
+{
+  assay <- assay %||% DefaultAssay(object = object)
+  DefaultAssay(object = object) <- assay
+  split.colors <- !is.null(x = split.by) && !any(cols %in% 
+                                                   rownames(x = brewer.pal.info))
+  scale.func <- switch(EXPR = scale.by, size = scale_size, 
+                       radius = scale_radius, stop("'scale.by' must be either 'size' or 'radius'"))
+  feature.groups <- NULL
+  if (is.list(features) | any(!is.na(names(features)))) {
+    feature.groups <- unlist(x = sapply(X = 1:length(features), 
+                                        FUN = function(x) {
+                                          return(rep(x = names(x = features)[x], each = length(features[[x]])))
+                                        }))
+    if (any(is.na(x = feature.groups))) {
+      warning("Some feature groups are unnamed.", call. = FALSE, 
+              immediate. = TRUE)
+    }
+    features <- unlist(x = features)
+    names(x = feature.groups) <- features
+  }
+  cells <- unlist(x = CellsByIdentities(object = object, cells = colnames(object[[assay]]), 
+                                        idents = idents))
+  data.features <- FetchData(object = object, vars = features, 
+                             cells = cells)
+  data.features$id <- if (is.null(x = group.by)) {
+    Idents(object = object)[cells, drop = TRUE]
+  }
+  else {
+    object[[group.by, drop = TRUE]][cells, drop = TRUE]
+  }
+  if (!is.factor(x = data.features$id)) {
+    data.features$id <- factor(x = data.features$id)
+  }
+  id.levels <- levels(x = data.features$id)
+  data.features$id <- as.vector(x = data.features$id)
+  if (!is.null(x = split.by)) {
+    splits <- FetchData(object = object, vars = split.by)[cells, 
+                                                          split.by]
+    if (split.colors) {
+      if (length(x = unique(x = splits)) > length(x = cols)) {
+        stop(paste0("Need to specify at least ", length(x = unique(x = splits)), 
+                    " colors using the cols parameter"))
+      }
+      cols <- cols[1:length(x = unique(x = splits))]
+      names(x = cols) <- unique(x = splits)
+    }
+    data.features$id <- paste(data.features$id, splits, 
+                              sep = "_")
+    unique.splits <- unique(x = splits)
+    id.levels <- paste0(rep(x = id.levels, each = length(x = unique.splits)), 
+                        "_", rep(x = unique(x = splits), times = length(x = id.levels)))
+  }
+  data.plot <- lapply(X = unique(x = data.features$id), FUN = function(ident) {
+    data.use <- data.features[data.features$id == ident, 
+                              1:(ncol(x = data.features) - 1), drop = FALSE]
+    avg.exp <- apply(X = data.use, MARGIN = 2, FUN = function(x) {
+      return(mean(x = expm1(x = x)))
+    })
+    pct.exp <- apply(X = data.use, MARGIN = 2, FUN = PercentAbove, 
+                     threshold = 0)
+    return(list(avg.exp = avg.exp, pct.exp = pct.exp))
+  })
+  names(x = data.plot) <- unique(x = data.features$id)
+  if (cluster.idents) {
+    mat <- do.call(what = rbind, args = lapply(X = data.plot, 
+                                               FUN = unlist))
+    mat <- scale(x = mat)
+    id.levels <- id.levels[hclust(d = dist(x = mat))$order]
+  }
+  data.plot <- lapply(X = names(x = data.plot), FUN = function(x) {
+    data.use <- as.data.frame(x = data.plot[[x]])
+    data.use$features.plot <- rownames(x = data.use)
+    data.use$id <- x
+    return(data.use)
+  })
+  data.plot <- do.call(what = "rbind", args = data.plot)
+  if (!is.null(x = id.levels)) {
+    data.plot$id <- factor(x = data.plot$id, levels = id.levels)
+  }
+  ngroup <- length(x = levels(x = data.plot$id))
+  if (ngroup == 1) {
+    scale <- FALSE
+    warning("Only one identity present, the expression values will be not scaled", 
+            call. = FALSE, immediate. = TRUE)
+  }
+  else if (ngroup < 5 & scale) {
+    warning("Scaling data with a low number of groups may produce misleading results", 
+            call. = FALSE, immediate. = TRUE)
+  }
+  avg.exp.scaled <- sapply(X = unique(x = data.plot$features.plot), 
+                           FUN = function(x) {
+                             data.use <- data.plot[data.plot$features.plot == 
+                                                     x, "avg.exp"]
+                             if (scale) {
+                               data.use <- scale(x = log1p(data.use))
+                               data.use <- MinMax(data = data.use, min = col.min, 
+                                                  max = col.max)
+                             }
+                             else {
+                               data.use <- log1p(x = data.use)
+                             }
+                             return(data.use)
+                           })
+  avg.exp.scaled <- as.vector(x = t(x = avg.exp.scaled))
+  if (split.colors) {
+    avg.exp.scaled <- as.numeric(x = cut(x = avg.exp.scaled, 
+                                         breaks = 20))
+  }
+  data.plot$avg.exp.scaled <- avg.exp.scaled
+  data.plot$features.plot <- factor(x = data.plot$features.plot, 
+                                    levels = features)
+  data.plot$pct.exp[data.plot$pct.exp < dot.min] <- NA
+  data.plot$pct.exp <- data.plot$pct.exp * 100
+  if (split.colors) {
+    splits.use <- unlist(x = lapply(X = data.plot$id, FUN = function(x) sub(paste0(".*_(", 
+                                                                                   paste(sort(unique(x = splits), decreasing = TRUE), 
+                                                                                         collapse = "|"), ")$"), "\\1", x)))
+    data.plot$colors <- mapply(FUN = function(color, value) {
+      return(colorRampPalette(colors = c("grey", color))(20)[value])
+    }, color = cols[splits.use], value = avg.exp.scaled)
+  }
+  color.by <- ifelse(test = split.colors, yes = "colors", 
+                     no = "avg.exp.scaled")
+  if (!is.na(x = scale.min)) {
+    data.plot[data.plot$pct.exp < scale.min, "pct.exp"] <- scale.min
+  }
+  if (!is.na(x = scale.max)) {
+    data.plot[data.plot$pct.exp > scale.max, "pct.exp"] <- scale.max
+  }
+  if (!is.null(x = feature.groups)) {
+    data.plot$feature.groups <- factor(x = feature.groups[data.plot$features.plot], 
+                                       levels = unique(x = feature.groups))
+  }
+  plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", 
+                                                        y = "id")) + geom_point(mapping = aes_string(size = "pct.exp", 
+                                                                                                     color = color.by)) + scale.func(range = c(0, dot.scale), 
+                                                                                                                                     limits = c(scale.min, scale.max)) + theme(axis.title.x = element_blank(), 
+                                                                                                                                                                               axis.title.y = element_blank()) + guides(size = guide_legend(title = "% Exp")) + 
+    labs(x = "", y = ifelse(test = is.null(x = split.by), 
+                            yes = "", no = "Split Identity")) + theme_cowplot()
+  if (!is.null(x = feature.groups)) {
+    plot <- plot + facet_grid(facets = ~feature.groups, 
+                              scales = "free_x", space = "free_x", switch = "y") + 
+      theme(panel.spacing = unit(x = 1, units = "lines"), 
+            strip.background = element_blank())
+  }
+  if (split.colors) {
+    plot <- plot + scale_color_identity()
+  }
+  else if (length(x = cols) == 1) {
+    plot <- plot + scale_color_distiller(palette = cols)
+  }
+  else {
+    plot <- plot + scale_color_gradient(low = cols[1], high = cols[2])
+  }
+  if (!split.colors) {
+    plot <- plot + guides(color = guide_colorbar(title = "Avg Exp"))
+  }
+  return(plot)
+}
+
+DotPlot_aeg(CosMx_Protein_log_norm, group.by = 'merged_annot_cluster', features = features, col.min = 0, cols = c('lightgray', 'red')) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + coord_flip()
+ggsave('CosMx_Protein_DE_genes.pdf', width = 5, height = 6)
+```
+
+## Figure 1b (CosMx RNA)
+```{r}
+DimPlot(CosMX_RNA_merged, group.by = 'annot_cluster2', split.by = 'Response', cols = color_clusters, raster = F) + ggtitle('')
+ggsave('cosMX_RNA.pdf', width = 7, height = 3.5)
+```
+
+## Figure 1b (CosMx RNA)
+```{r}
+df <- as.data.frame(table(CosMX_RNA_merged$Response, CosMX_RNA_merged$annot_cluster2))
+
+df2 <- df %>%
+  group_by(Var1) %>%
+  mutate(Percentage = Freq / sum(Freq) * 100) %>%
+  ungroup()
+
+df2 %>%
+  group_by(Var1) %>%
+  summarise(TotalPercentage = sum(Percentage))
+# Var1  TotalPercentage
+# <fct>           <dbl>
+# 1 NR                100
+# 2 R                 100
+
+# Create a named vector for the color palette based on unique Var2 values
+unique_var2 <- unique(df2$Var2)
+color_palette <- setNames(color_clusters[seq_along(unique_var2)], unique_var2)
+
+# Create the plot
+ggplot(df2, aes(x = Var1, y = Percentage, fill = Var2)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = color_palette) +
+  labs(title = "CosMx RNA cell type percentage by ICB response",
+       x = "Group",
+       y = "Percentage of all cells",
+       fill = "Category") +
+  theme_classic()
+ggsave('cosmx_rna_cellfreqbarplot.pdf', width = 9, height = 5)
+```
+
+## Figure 1b (CosMx RNA)
+```{r}
+CosMX_RNA_merged$annot_cluster2[grep('inflammatory', CosMX_RNA_merged$annot_cluster2)] <- 'Fibroblast_VEGFA_iCAFs'
+CosMX_RNA_merged$annot_cluster2 <- gsub("Fibroblast", "Fib", CosMX_RNA_merged$annot_cluster2)
+
+features <- c('MS4A1', 'CD79A', 'IGHG2', 'HLA-DRB1', 'HLA-DRA', 'LAMP3', 'CLEC9A', 'CD1C', 
+              'PECAM1', 'CD34', 'VIM', 'DCN', 'COL1A2', 'CD74','HLA-C', 'VIM', 'ACTA2', 'VEGFA', 
+              'COL1A1', 'C1QC', 'C1QA', 'CD68', 'CD14', 'FCGR3A', 'S100A8', 'S100A9', 'VCAN', 'FCN1', 'CD38', 'JCHAIN', 
+              'CD3E', 'CD4', 'CD8A', 'FOXP3', 'CTLA4', 'HIF1A', 'KRT17', 'KRT14', 
+              'KRT16', 'KRT19', 'KRT15', 'KRT5', 'KRT4')
+DotPlot_aeg <- function (object, features, assay = NULL, cols = c("lightgrey", 
+          "blue"), col.min = -2.5, col.max = 2.5, dot.min = 0, dot.scale = 6, 
+          idents = NULL, group.by = NULL, split.by = NULL, cluster.idents = FALSE, 
+          scale = TRUE, scale.by = "radius", scale.min = NA, scale.max = NA) 
+{
+  assay <- assay %||% DefaultAssay(object = object)
+  DefaultAssay(object = object) <- assay
+  split.colors <- !is.null(x = split.by) && !any(cols %in% 
+                                                   rownames(x = brewer.pal.info))
+  scale.func <- switch(EXPR = scale.by, size = scale_size, 
+                       radius = scale_radius, stop("'scale.by' must be either 'size' or 'radius'"))
+  feature.groups <- NULL
+  if (is.list(features) | any(!is.na(names(features)))) {
+    feature.groups <- unlist(x = sapply(X = 1:length(features), 
+                                        FUN = function(x) {
+                                          return(rep(x = names(x = features)[x], each = length(features[[x]])))
+                                        }))
+    if (any(is.na(x = feature.groups))) {
+      warning("Some feature groups are unnamed.", call. = FALSE, 
+              immediate. = TRUE)
+    }
+    features <- unlist(x = features)
+    names(x = feature.groups) <- features
+  }
+  cells <- unlist(x = CellsByIdentities(object = object, cells = colnames(object[[assay]]), 
+                                        idents = idents))
+  data.features <- FetchData(object = object, vars = features, 
+                             cells = cells)
+  data.features$id <- if (is.null(x = group.by)) {
+    Idents(object = object)[cells, drop = TRUE]
+  }
+  else {
+    object[[group.by, drop = TRUE]][cells, drop = TRUE]
+  }
+  if (!is.factor(x = data.features$id)) {
+    data.features$id <- factor(x = data.features$id)
+  }
+  id.levels <- levels(x = data.features$id)
+  data.features$id <- as.vector(x = data.features$id)
+  if (!is.null(x = split.by)) {
+    splits <- FetchData(object = object, vars = split.by)[cells, 
+                                                          split.by]
+    if (split.colors) {
+      if (length(x = unique(x = splits)) > length(x = cols)) {
+        stop(paste0("Need to specify at least ", length(x = unique(x = splits)), 
+                    " colors using the cols parameter"))
+      }
+      cols <- cols[1:length(x = unique(x = splits))]
+      names(x = cols) <- unique(x = splits)
+    }
+    data.features$id <- paste(data.features$id, splits, 
+                              sep = "_")
+    unique.splits <- unique(x = splits)
+    id.levels <- paste0(rep(x = id.levels, each = length(x = unique.splits)), 
+                        "_", rep(x = unique(x = splits), times = length(x = id.levels)))
+  }
+  data.plot <- lapply(X = unique(x = data.features$id), FUN = function(ident) {
+    data.use <- data.features[data.features$id == ident, 
+                              1:(ncol(x = data.features) - 1), drop = FALSE]
+    avg.exp <- apply(X = data.use, MARGIN = 2, FUN = function(x) {
+      return(mean(x = expm1(x = x)))
+    })
+    pct.exp <- apply(X = data.use, MARGIN = 2, FUN = PercentAbove, 
+                     threshold = 0)
+    return(list(avg.exp = avg.exp, pct.exp = pct.exp))
+  })
+  names(x = data.plot) <- unique(x = data.features$id)
+  if (cluster.idents) {
+    mat <- do.call(what = rbind, args = lapply(X = data.plot, 
+                                               FUN = unlist))
+    mat <- scale(x = mat)
+    id.levels <- id.levels[hclust(d = dist(x = mat))$order]
+  }
+  data.plot <- lapply(X = names(x = data.plot), FUN = function(x) {
+    data.use <- as.data.frame(x = data.plot[[x]])
+    data.use$features.plot <- rownames(x = data.use)
+    data.use$id <- x
+    return(data.use)
+  })
+  data.plot <- do.call(what = "rbind", args = data.plot)
+  if (!is.null(x = id.levels)) {
+    data.plot$id <- factor(x = data.plot$id, levels = id.levels)
+  }
+  ngroup <- length(x = levels(x = data.plot$id))
+  if (ngroup == 1) {
+    scale <- FALSE
+    warning("Only one identity present, the expression values will be not scaled", 
+            call. = FALSE, immediate. = TRUE)
+  }
+  else if (ngroup < 5 & scale) {
+    warning("Scaling data with a low number of groups may produce misleading results", 
+            call. = FALSE, immediate. = TRUE)
+  }
+  avg.exp.scaled <- sapply(X = unique(x = data.plot$features.plot), 
+                           FUN = function(x) {
+                             data.use <- data.plot[data.plot$features.plot == 
+                                                     x, "avg.exp"]
+                             if (scale) {
+                               data.use <- scale(x = log1p(data.use))
+                               data.use <- MinMax(data = data.use, min = col.min, 
+                                                  max = col.max)
+                             }
+                             else {
+                               data.use <- log1p(x = data.use)
+                             }
+                             return(data.use)
+                           })
+  avg.exp.scaled <- as.vector(x = t(x = avg.exp.scaled))
+  if (split.colors) {
+    avg.exp.scaled <- as.numeric(x = cut(x = avg.exp.scaled, 
+                                         breaks = 20))
+  }
+  data.plot$avg.exp.scaled <- avg.exp.scaled
+  data.plot$features.plot <- factor(x = data.plot$features.plot, 
+                                    levels = features)
+  data.plot$pct.exp[data.plot$pct.exp < dot.min] <- NA
+  data.plot$pct.exp <- data.plot$pct.exp * 100
+  if (split.colors) {
+    splits.use <- unlist(x = lapply(X = data.plot$id, FUN = function(x) sub(paste0(".*_(", 
+                                                                                   paste(sort(unique(x = splits), decreasing = TRUE), 
+                                                                                         collapse = "|"), ")$"), "\\1", x)))
+    data.plot$colors <- mapply(FUN = function(color, value) {
+      return(colorRampPalette(colors = c("grey", color))(20)[value])
+    }, color = cols[splits.use], value = avg.exp.scaled)
+  }
+  color.by <- ifelse(test = split.colors, yes = "colors", 
+                     no = "avg.exp.scaled")
+  if (!is.na(x = scale.min)) {
+    data.plot[data.plot$pct.exp < scale.min, "pct.exp"] <- scale.min
+  }
+  if (!is.na(x = scale.max)) {
+    data.plot[data.plot$pct.exp > scale.max, "pct.exp"] <- scale.max
+  }
+  if (!is.null(x = feature.groups)) {
+    data.plot$feature.groups <- factor(x = feature.groups[data.plot$features.plot], 
+                                       levels = unique(x = feature.groups))
+  }
+  plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", 
+                                                        y = "id")) + geom_point(mapping = aes_string(size = "pct.exp", 
+                                                                                                     color = color.by)) + scale.func(range = c(0, dot.scale), 
+                                                                                                                                     limits = c(scale.min, scale.max)) + theme(axis.title.x = element_blank(), 
+                                                                                                                                                                               axis.title.y = element_blank()) + guides(size = guide_legend(title = "% Exp")) + 
+    labs(x = "", y = ifelse(test = is.null(x = split.by), 
+                                    yes = "", no = "Split Identity")) + theme_cowplot()
+  if (!is.null(x = feature.groups)) {
+    plot <- plot + facet_grid(facets = ~feature.groups, 
+                              scales = "free_x", space = "free_x", switch = "y") + 
+      theme(panel.spacing = unit(x = 1, units = "lines"), 
+            strip.background = element_blank())
+  }
+  if (split.colors) {
+    plot <- plot + scale_color_identity()
+  }
+  else if (length(x = cols) == 1) {
+    plot <- plot + scale_color_distiller(palette = cols)
+  }
+  else {
+    plot <- plot + scale_color_gradient(low = cols[1], high = cols[2])
+  }
+  if (!split.colors) {
+    plot <- plot + guides(color = guide_colorbar(title = "Avg Exp"))
+  }
+  return(plot)
+}
+
+
+DotPlot_aeg(CosMX_RNA_merged, group.by = "annot_cluster2", features = unique(features), col.min=0, cols = c("lightgray", "red")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1)) + theme(legend_title = 'Avg Expression') 
+ggsave('cosmx_rna_degenes.pdf', width = 9, height = 5)
+```
+
+
+
+## Figure 1c (Visium feature plots)
+```{r}
+plotSpatialScatterpie(x=ck17_5, 
+                      y=as.data.frame(ck17_5@meta.data[,c('SCDC_Fibroblasts', 'SCDC_Epithelial cells', 'SCDC_CD45pos')]),
+                      pie_scale = 0.35) +
+  scale_fill_manual(values =c('navy', 'lightgoldenrod', 'firebrick')) +
+  scale_y_reverse()
+ggsave('SCDC_ck17_5_scatterpie.pdf')
+
+plotSpatialScatterpie(x=ck17_7, 
+                      y=as.data.frame(ck17_7@meta.data[,c('SCDC_Fibroblasts', 'SCDC_Epithelial cells', 'SCDC_CD45pos')]), 
+                      pie_scale = 0.35) +
+  scale_fill_manual(values =c('navy', 'lightgoldenrod', 'firebrick')) +
+  scale_y_reverse()
+ggsave('SCDC_ck17_7_scatterpie.pdf')
+
+
+
+pdf('KRT14_COL1A1_LYZ_featureplot_ck17_5.pdf', pointsize = 14, height = 5, width = 10)
+SpatialFeaturePlot(ck17_5, features = c('KRT14' , 'COL1A1', 'LYZ'), keep.scale = 'all', pt.size.factor = 2500)
+dev.off() 
+
+pdf('KRT14_COL1A1_LYZ_featureplot_ck17_7.pdf', pointsize = 14, height = 5, width = 10)
+SpatialFeaturePlot(ck17_7, features = c('KRT14' , 'COL1A1', 'LYZ'), keep.scale = 'all', pt.size.factor = 2500)
+dev.off() 
+```
+
+## Figure 1d (Visium barplots)
+```{r}
+scdc <- scdc %>%
+  group_by(Cell_Type, Sample_Name) %>%
+  summarise(Proportion = mean(Proportion),
+            Response = first(Response),
+            .groups = "drop")
+
+
+# First, calculate the sum of proportions for each Sample_Name
+sample_totals <- scdc %>%
+  group_by(Sample_Name) %>%
+  summarise(Total = sum(Proportion))
+
+# Create the "Others" category
+others <- scdc %>%
+  group_by(Sample_Name) %>%
+  summarise(
+    Cell_Type = "Others",
+    Proportion = 1 - sum(Proportion),
+    Response = first(Response)
+  )
+
+# Combine the original data with the "Others" category
+scdc_with_others <- bind_rows(scdc, others)
+
+# Reorder the rows to group by Sample_Name
+scdc_with_others <- scdc_with_others %>%
+  arrange(Sample_Name, Cell_Type)
+
+
+# Now create the bar plot
+r_plot <- ggplot(scdc_with_others[scdc_with_others$Response == 'Responder' & !scdc_with_others$Sample_Name %in% c('ck17_209', 'ck17_21', 'ck17_27'),], aes(x = Sample_Name, y = Proportion, fill = Cell_Type)) +
+  geom_col() +
+  labs(x = "ICB responders",
+       y = "Fraction of cells") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c('firebrick', 'lightgoldenrod', 'navy', 'grey'))
+
+nr_plot <- ggplot(scdc_with_others[scdc_with_others$Response == 'Non-Responder' & !scdc_with_others$Sample_Name %in% c('ck17_209', 'ck17_21', 'ck17_27'),], aes(x = Sample_Name, y = Proportion, fill = Cell_Type)) +
+  geom_col() +
+  labs(x = "ICB non-responders",
+       y = "Fraction of cells") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c('firebrick', 'lightgoldenrod', 'navy', 'grey'))
+pdf('SCDC_celltype_distribution_barplots.pdf', width = 3, height = 4)
+cowplot::plot_grid(r_plot, nr_plot, ncol = 1)
+dev.off()
+pdf('horizontal_SCDC_celltype_distribution_barplots.pdf', width = 7, height = 3)
+cowplot::plot_grid(r_plot, nr_plot, ncol = 2)
+dev.off()
+```
+
+
+
+## Figure 1e (Single cell--Cillo)
+```{r}
+DimPlot(hnc2, group.by = 'global.cluster4')
+
+hnc2@meta.data <- hnc2@meta.data %>% 
+  mutate(global.cluster = case_when(global.cluster4 %like% c('%Mono%') ~ "Monocytes",
+                        global.cluster4 %like% c('%Mac%')  ~ "Macrophages", 
+                        global.cluster4 %like% c('%cDC%') ~ 'Dendritic cells',
+                        global.cluster4 %like% c('%mregDC%') ~ 'Dendritic cells',
+                        global.cluster4 %like% c('%pDC%') ~ 'Dendritic cells'))
+
+DimPlot(hnc2, group.by = 'global.cluster4', cols = color_clusters) + ggtitle('') +
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        #legend.position="none",
+        panel.background=element_blank(),
+        panel.border=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),
+        plot.background=element_blank())
+ggsave('Cillo_UMAP.pdf', width = 5, height = 4)
+
+DimPlot(hnc2, group.by = 'global.cluster4', cols = color_clusters, split.by = 'tissue') + ggtitle('') +
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        legend.position="none",
+        panel.background=element_blank(),
+        panel.border=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),
+        plot.background=element_blank())
+ggsave('Cillo_UMAP_split.pdf', width = 3.5, height = 2.5)
+
+hnc2$global.cluster4 <- factor(hnc2$global.cluster4, levels = c('cDC1_CLEC9A', 'cDC2_CD1C', 'cDC2_CD33', 'DC_pDC', 'mregDC_LAMP3', 'Mac_CXCL9',
+                                                                   'Mac_IL1B', 'Mac_IL1Bint', 'Mac_SPP1', 'Mast', 'Mono_CD14', 'Mono_CD14_ID1', 
+                                                                   'Mono_CD14_IL1B', 'Mono_CD14_THBS1', 'Mono_CD16', 'Mono_Int', 'Mono_TIL'))
+
+DotPlot(hnc2, group.by = 'global.cluster4', features = c('APOBEC3A', 'TIMP1', 'CXCL10', 'CXCL8', 'LILRB2', 'FCGR3A', 'KLF2', 'LST1', 'CLEC4E', 'IL1R2', 'THBS1', 
+                                                         'NFKBIA', 'NLRP3', 'EGR1', 'THBD', 'HBEGF', 'ID1', 'VCAN', 'S100A12', 'S100A9', 'S100A8', 'CPA3', 'TPSAB1',
+                                                         'KIT', 'APOC1', 'MMP9', 'PLTP', 'FABP5', 'HSPB1', 'SPP1', 'EREG', 'CCL4', 'IL1B', 'APOE', 'CXCL9', 'C1QC', 'C1QA',
+                                                         'FSCN1', 'CCR7', 'LAMP3', 'GZMB', 'IL3RA', 'LILRA4', 'FCER1A', 'CLEC10A', 'CD33', 'HLA-DQA1', 'S100B', 
+                                                         'CD1C', 'IDO1', 'FLT3', 'CLEC9A'), cols = c('lightgrey', 'red'), col.min = 0) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + coord_flip()
+ggsave('Cillo_DE_dotplot.pdf', width = 7, height = 12)
+```
+
+## Figure 1f (Single cell--Luoma)
+```{r}
+color_clusters <- c("#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72", "#B17BA6", "#FF7F00", "#FDB462",
+                    "#E78AC3", "#8DD3C7", "#E6AB02", 
+                    "#7570B3", "#BEAED4", "#666666", "#999999", "#AA8282", "#D4B7B7", "#8600BF", "#BA5CE3", 
+                    "#808000","#AEAE5C", "#1E90FF", "#00BFFF", "#56FF0D", "#FFFF00")
+
+luoma$consensus_clusters <- factor(luoma$consensus_clusters, levels = c('cDC1_CLEC9A', 'cDC2_CD1C', 'cDC2_CD33', 'DC_pDC',  'Mac_CXCL9',
+                                                                'Mac_IL1B', 'Mac_IL1Bint', 'Mac_SPP1', 'Blood-like_CD14_Mono', 'CD16_Mono',
+                                                                'Mono_Int', 'Mono_TIL',  'mregDC_LAMP3',
+                                                                'CXCL13_Tcells', 'GZMK_CD8', 'IL7R_CD4', 'ITGAE_CD8', 'Tregs', 'NR4A2_CD8'))
+
+DimPlot(luoma, group.by = 'consensus_clusters', split.by = 'response_binary', cols = color_clusters, ncol = 1) + ggtitle('')
+ggsave('luoma_UMAP.pdf', width = 6, height = 8)
+```
+

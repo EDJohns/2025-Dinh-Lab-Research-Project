@@ -1,0 +1,792 @@
+---
+title: "Fig2"
+author: "Athena Golfinos-Owens"
+date: "2024-10-23"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+library(Seurat)
+library(ggplot2)
+library(cowplot)
+library(dplyr)
+library(tidyr)
+library(ComplexHeatmap)
+library(circlize)
+library(DescTools)
+library(tibble)
+library(DescTools)
+library(EnhancedVolcano)
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
+
+# Print the current working directory (optional, for verification) 
+print(getwd())
+
+color_clusters <- c("#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72", "#B17BA6", 
+                    "#FF7F00", "#FDB462", "#E7298A", "#E78AC3","#33A02C", "#B2DF8A", 
+                    "#55A1B1", "#8DD3C7", "#A6761D", "#E6AB02", "#7570B3", "#BEAED4", 
+                    "#666666", "#999999", "#AA8282", "#D4B7B7", "#8600BF", "#BA5CE3", 
+                    "#808000","#AEAE5C", "#1E90FF", "#00BFFF", "#56FF0D", "#FFFF00")
+
+load("/Volumes/hqdinh2/Projects/!GEO_Dryad_Submissions/Golfinos_Owen_et_al_HNSCC_ICI/SeuratObjects_dataFrames/CosMX_RNA_merged.rda")
+load("/Volumes/hqdinh2/Projects/2.HNC_SPORE_SingleCell_Spatial/CosMX_TMA/Protein-data/Analysis/CosMX_protein_annot_cluster.rda")
+#load("/Volumes/hqdinh2/Projects/!GEO_Dryad_Submissions/Golfinos_Owen_et_al_HNSCC_ICI/SeuratObjects_dataFrames/CosMX_protein_annot_cluster.rda")
+```
+
+## HNC ICB response manuscript
+## Golfinos-Owens et al 2025
+
+```{r prep for Fig 2a--Neighborhood Coordination for CosMx protein data}
+# pre-running the Neighborhood Coordination script 
+ni.input <- CosMx_Protein_log_norm[[c('x_FOV_px', 'y_FOV_px', 'tma_fov_id', 'Patient.ID', 'Response', 'merged_annot_cluster')]]
+write.csv(ni.input, file = '/Volumes/hqdinh2/Projects/!GEO_Dryad_Submissions/Golfinos_Owen_et_al_HNSCC_ICI/SeuratObjects_dataFrames/Protein_ni.input.csv')
+```
+
+```{r Fig 2a--protein neighborhood heatmap}
+CosMx_Protein_log_norm$NhCoord20_anno <- gsub("Fibroblast", "Fib", CosMx_Protein_log_norm$NhCoord20_anno)
+CosMx_Protein_log_norm$NhCoord20_anno <- gsub("Immune", "Imm", CosMx_Protein_log_norm$NhCoord20_anno)
+CosMx_Protein_log_norm$NhCoord20_anno <- gsub("Myeloid_Centric", "Neutrophil_Centric", CosMx_Protein_log_norm$NhCoord20_anno)
+
+# Create a table of cell counts
+cell_counts <- CosMx_Protein_log_norm@meta.data %>%
+  group_by(NhCoord20_anno, merged_annot_cluster) %>%
+  summarise(count = n()) %>%
+  spread(merged_annot_cluster, count, fill = 0)
+
+# Convert NhCoord20_anno to row names and remove it as a column
+cell_counts_matrix <- as.matrix(cell_counts[,-1])
+rownames(cell_counts_matrix) <- cell_counts$NhCoord20_anno
+
+# Calculate centroids (average profile for each NhCoord20_anno cluster)
+centroids <- cell_counts %>%
+  group_by(NhCoord20_anno) %>%
+  summarise(across(everything(), mean))
+
+# Convert centroids to matrix and set row names
+centroids_matrix <- as.matrix(centroids[,-1])
+rownames(centroids_matrix) <- centroids$NhCoord20_anno
+
+# Calculate tissue averages
+tissue_avgs <- colMeans(cell_counts_matrix)
+
+# Calculate fold changes
+calculate_fold_change <- function(row, tissue_avgs) {
+  niche_clusters <- row + tissue_avgs
+  niche_sum <- sum(niche_clusters)
+  log2((niche_clusters / niche_sum) / tissue_avgs)
+}
+
+fc_matrix <- t(apply(centroids_matrix, 1, calculate_fold_change, tissue_avgs))
+
+# Rescale the fold changes to be between -3 and 3
+rescale_to_range <- function(x, new_min = -3, new_max = 3) {
+  old_min <- min(x)
+  old_max <- max(x)
+  new_min + ((x - old_min) * (new_max - new_min) / (old_max - old_min))
+}
+
+fc_matrix_rescaled <- apply(fc_matrix, 2, rescale_to_range)
+
+# Cap values at -3 and 3
+fc_matrix_rescaled[fc_matrix_rescaled < -3] <- -3
+fc_matrix_rescaled[fc_matrix_rescaled > 3] <- 3
+
+# Prepare the heatmap
+# Define the color mapping function
+col_fun = colorRamp2(c(-3, 0, 3), c("blue", "white", "red"))
+
+fc_matrix_rescaled <- as.data.frame(fc_matrix_rescaled)
+
+rownames(fc_matrix_rescaled)
+# [1] "DC_T_B_NK_Centric"   "Endothelial_Centric" "Fib_Centric"         "Fib_Imm_Mixed"       "Imm_Mixed"           "Neutrophil_Centric"  "Tumor_Epi_Centric"  
+
+rownames(fc_matrix_rescaled) <- c('Immune_High', 'Endothelials', 'Stromal_Fibroblast', 'Immune_CAF_Mixed', 'Macrophage_High', 'Neutrophil_High', 'Tumor_High')
+
+# Create the heatmap
+# Set graphics device options (if plotting to a file)
+options(bitmapType = "cairo")
+
+# Create the heatmap
+heatmap <- Heatmap(fc_matrix_rescaled,
+                   name = "Log2 Fold Change",
+                   col = col_fun,
+                   cluster_rows = TRUE,
+                   cluster_columns = TRUE,
+                   show_row_names = TRUE,
+                   show_column_names = TRUE,
+                   column_names_rot = 45,
+                   row_names_side = "left",
+                   column_title_side = 'bottom',
+                   column_title = "Cell Types",
+                   row_title = "Neighborhoods",
+                   rect_gp = gpar(col = NA, lwd = 0),  # Negative line width
+                   border = FALSE,
+                   #width = unit(10, "inches"),  # Increase overall size
+                   #height = unit(8, "inches"),
+                   heatmap_legend_param = list(
+                     title = "Normalized cell type enrichment score",
+                     title_position = "leftcenter-rot",
+                     title_gp = gpar(fontsize = 10),
+                     at = c(-3, 0, 3),
+                     labels = c("-3", "0", "3"),
+                     legend_height = unit(4, "cm"),
+                     grid_width = unit(0.5, "cm")
+                   ))
+
+# Draw the heatmap
+pdf('ComplexHeatmap_celltypes_per_neighborhood_complexheatmap.pdf', width = 6, height = 3.5)
+draw(heatmap)
+dev.off()
+```
+
+```{r Fig 2b--protein neighborhood frequency, warning=FALSE}
+CosMx_Protein_log_norm$orig.ident <- CosMx_Protein_log_norm$tma_fov_id
+CosMx_Protein_log_norm$NhCoord20_anno <- gsub("Fibroblast", "Fib", CosMx_Protein_log_norm$NhCoord20_anno)
+CosMx_Protein_log_norm$NhCoord20_anno <- gsub("Immune", "Imm", CosMx_Protein_log_norm$NhCoord20_anno)
+CosMx_Protein_log_norm$NhCoord20_anno <- gsub("Myeloid_Centric", "Neutrophil_Centric", CosMx_Protein_log_norm$NhCoord20_anno)
+
+CosMx_Protein_log_norm <- CosMx_Protein_log_norm %>%
+  Seurat::AddMetaData(
+    metadata = case_when(
+      CosMx_Protein_log_norm$NhCoord20_anno == "DC_T_B_NK_Centric" ~ 'Immune_High',
+      CosMx_Protein_log_norm$NhCoord20_anno == "Endothelial_Centric" ~ "Endothelials",
+      CosMx_Protein_log_norm$NhCoord20_anno == "Fib_Centric" ~ "Stromal_Fibroblast",
+      CosMx_Protein_log_norm$NhCoord20_anno == "Fib_Imm_Mixed" ~ "Immune_CAF_Mixed",
+      CosMx_Protein_log_norm$NhCoord20_anno == "Imm_Mixed" ~ "Macrophage_High",
+      CosMx_Protein_log_norm$NhCoord20_anno == "Neutrophil_Centric" ~ "Neutrophil_High",
+      CosMx_Protein_log_norm$NhCoord20_anno == "Tumor_Epi_Centric" ~ "Tumor_High",
+      TRUE ~ as.character(CosMx_Protein_log_norm$NhCoord20_anno)
+    ),
+    col.name = "NhCoord20_anno_new"
+  )
+
+
+
+
+freq_plot <- function(SEU, metadata, split.meta = 'tissue_hpv', graph_type = c('stacked_barplot', 'freq_boxplot'), 
+                      out, out_width = 12, out_height = 8, out_units = 'in', out_res = 300, test_by_group = TRUE){
+  
+  set.seed(329)
+  
+  require(ggplot2)
+  require(DescTools)
+  require(Seurat)
+  
+  
+  Idents(SEU) <- metadata
+  new.ident <- sort(unique(Idents(SEU)))
+  samples <- unique(SEU@meta.data$orig.ident)
+  tmp <- match(SEU$orig.ident, samples)
+  sample_ind <- unique(tmp)
+  ids <- Idents(SEU)
+  tmp_v <- matrix(0, nrow = length(samples), ncol = length(new.ident))
+  rownames(tmp_v) <- samples
+  total_in_sample <- rep(0, length(samples))
+  tmp <- SEU$orig.ident
+  tmp <- plyr::count(tmp)
+  total_in_sample = tmp$freq
+  names(total_in_sample) <- tmp$x
+  total_in_sample <- total_in_sample[match(samples, names(total_in_sample))]
+  for (i in 1:length(new.ident)) {
+    tmp <- ids[which(ids == new.ident[i])]
+    tmp <- SEU$orig.ident[match(names(tmp), rownames(SEU@meta.data))]
+    tmp <- plyr::count(tmp)
+    for (j in 1:nrow(tmp)) {
+      ind <- which(rownames(tmp_v) == tmp$x[j])
+      tmp_v[ind,i] <- tmp$freq[j]
+    }
+  }
+  colnames(tmp_v) <- new.ident
+  ind <- order(colnames(tmp_v))
+  t2 <- tmp_v
+  for (i in 1:nrow(t2)) {
+    t2[i,] = t2[i,]/sum(t2[i,])
+  }
+  t2 <- as.data.frame(t2)
+  t2 <- as.matrix(t2)
+  
+  meta <- SEU@meta.data[,c('orig.ident', split.meta)]
+  rownames(meta) <- NULL
+  meta <- unique(meta)
+  df <- NULL
+  for (i in 1:nrow(t2)) {
+    for (j in 1:ncol(t2)) {
+      df <- rbind(df, c(rownames(t2)[i], meta[[split.meta]][which(meta$orig.ident == rownames(t2)[i])], 
+                        colnames(t2)[j], as.numeric(t2[i,j])))
+    }
+  }
+  colnames(df) <- c('Sample', 'Group', 'Cluster', 'Freqs')
+  df <- as.data.frame(df)
+  df$Group <- as.character(df$Group)
+  df$Freqs <- as.numeric(as.character(df$Freqs))
+  
+  df <- df[!is.na(df$Freqs), ]
+  
+  if(isTRUE(test_by_group)){
+    all_p <- data.frame(subset = character(), p = numeric())
+    
+    for (x in unique(df$Cluster)) {
+      f <- df[df$Cluster == x,]
+      groups <- unique(df$Group)
+      f1 <- f[f$Group == groups[1],]$Freqs
+      f2 <- f[f$Group == groups[2],]$Freqs
+      wcx <- wilcox.test(f1, f2, paired = FALSE)
+      row <- c(x, wcx$p.value)
+      all_p <- rbind(all_p, row)
+      all_p[,2] <- format(round(as.numeric(all_p[,2]), 2), nsmall = 2)
+    }
+    
+    p_filtered <- all_p
+    
+    sub_title <- paste(p_filtered[,1], p_filtered[,2], sep = '=')
+  }
+  
+  write.csv(all_p, paste(out, 'freq_boxplot_wilcox.csv', sep = ''))
+  
+  df$Freqs <- df$Freqs * 100
+  
+  if (graph_type == 'freq_boxplot'){
+    ggplot(df) + 
+      geom_boxplot(aes(x = Group, y = Freqs, color = Group, fill = Group), position = position_dodge(), 
+                   alpha = 0.5, outlier.color = NA) + 
+      geom_point(aes(x = Group, y = Freqs, color = Group), alpha = 0.8, position = position_jitterdodge()) + 
+      facet_wrap(~ Cluster, scales = 'free', nrow = 2) + 
+      theme_bw() + 
+      stat_compare_means(aes(x = Group, y = Freqs), label.y.npc = 0.85) +
+      theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.title.x = element_blank(), 
+            strip.text = element_text(size = 12), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+      scale_shape_manual(values = 1:5) + 
+      scale_color_manual(values = c('#2196F3', '#FF8A80')) +
+      scale_fill_manual(values = c('#2196F3', '#FF8A80')) +
+      theme(legend.key.size = unit(1, 'cm'), legend.title = element_text(size=30), 
+            legend.text = element_text(size=20), axis.text=element_text(size=16),axis.title=element_text(size=30), 
+            legend.position = 'none') + 
+      labs(y= "Neighborhood Frequency")
+    
+    ggsave(paste(out, 'freq_boxplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, dpi = out_res)
+    write.csv(df, file = paste(out, 'freq_boxplot_data.csv', sep = ''))
+    return(df)
+  }
+  if (graph_type == 'stacked_barplot'){
+    pdf(paste(out, 'stacked_barplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, res = out_res)
+    ggplot(df) +geom_bar(aes(x = Group, y = Freqs, fill = Cluster), position = 'stack', stat = 'identity') + scale_fill_manual(values=color_clusters[1:as.numeric(length(unique(df$Cluster)))]) + theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    
+    ggsave(paste(out, 'stacked_barplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, dpi = out_res)
+    dev.off()
+    write.csv(df, file = paste(out, 'stacked_barplot_data.csv', sep = ''))
+    return(df)
+  }
+}
+
+fp_nhcoord20 <- freq_plot(SEU = CosMx_Protein_log_norm, 
+                          metadata = 'NhCoord20_anno_new', 
+                          split.meta = 'Response', 
+                          graph_type = 'freq_boxplot', 
+                          out = 'Protein_NH_', 
+                          out_width = 9, 
+                          out_height = 6)
+```
+
+```{r Fig 2b--protein FOV plotting}
+meta <- CosMx_Protein_log_norm[[c('tma_fov_id', 'x_FOV_px', 'y_FOV_px', 'NhCoord20_anno', 'Response', 'merged_annot_cluster')]]
+
+unique(meta$NhCoord20_anno)
+
+unique(meta$merged_annot_cluster)
+
+# looped version that makes a plot for every single neighborhood
+nhs <- unique(meta$NhCoord20_anno)
+
+# plotting one neighborhood and then saving
+for (x in 1:length(nhs)){
+  nh <- nhs[x]
+  meta$color_plot <- ifelse(meta$NhCoord20_anno == nh, nh, 'Other_NHs')
+  
+  ggplot(meta[meta$Response == 'R',], aes(x=x_FOV_px, y=y_FOV_px, color = color_plot)) + 
+    geom_point(size = 0.3) +
+    theme_classic() + 
+    facet_wrap(~ tma_fov_id) + 
+    scale_color_manual(values = c('red4', 'grey80'))
+  ggsave(paste('Protein', nh, 'R', 'FOV_plotting.pdf', sep = '_'), width = 14, height = 13)
+  
+  ggplot(meta[meta$Response == 'NR',], aes(x=x_FOV_px, y=y_FOV_px, color = color_plot)) + 
+    geom_point(size = 0.3) +
+    theme_classic() + 
+    facet_wrap(~ tma_fov_id) + 
+    scale_color_manual(values = c('cornflowerblue', 'grey80'))
+  ggsave(paste('Protein', nh, 'NR', 'FOV_plotting.pdf', sep = '_'), width = 14, height = 13)
+}
+
+
+
+
+
+
+nhs <- unique(meta$NhCoord20_anno)
+
+meta <- meta %>% mutate(annot_cluster3 = case_when(
+  grepl("B_cells", merged_annot_cluster) ~ "B_cells",
+  grepl("Plasma", merged_annot_cluster) ~ "Plasma cells",
+  grepl("Mono", merged_annot_cluster) ~ "Monocytes",
+  grepl("Macro", merged_annot_cluster) ~ "Macrophages",
+  grepl("DCs", merged_annot_cluster) ~ "DCs",
+  grepl("Tregs", merged_annot_cluster) ~ "Tregs",
+  grepl("CD8", merged_annot_cluster) ~ "CD8+ T cells",
+  grepl("CD4", merged_annot_cluster) ~ "CD4+ T cells",
+  grepl("Neutrophil", merged_annot_cluster) ~ "Neutrophils",
+  grepl("NK_cells", merged_annot_cluster) ~ "NK cells",
+  grepl("Fibroblast", merged_annot_cluster) ~"Fibroblasts", 
+  grepl('Tumor|Endo', merged_annot_cluster) ~ 'Other'))
+# Specify the neighborhood of interest
+nh <- 'DC_T_B_NK_Centric'
+# Create a new column for color plotting
+meta$color_plot <- ifelse(meta$NhCoord20_anno == nh, meta$annot_cluster3, 'Other')
+# Define colors for the plot
+# You need to specify colors for each unique value in merged_annot_cluster, plus 'Other_NHs'
+colors <- c('CD4+ T cells' = 'indianred', 
+            'CD8+ T cells' = 'red',
+            'Tregs' = 'orangered',
+            'NK cells' = 'aquamarine',
+            'B_cells' = 'chartreuse',
+            'Plasma cells' = 'olivedrab',
+            'Monocytes' = 'orchid',
+            'Macrophages' = 'orange',
+            'Neutrophils' = 'mediumorchid4',
+            'DCs' = 'goldenrod1',
+            'Fibroblasts' = 'navy', 
+            #'Other_cells_in_NH' = 'cornflowerblue', 
+            'Other' = 'grey80') # Add more clusters as needed
+
+meta <- meta %>%
+  mutate(
+    point_size = ifelse(color_plot == 'Other', 0.3, 0.5),
+    point_alpha = ifelse(color_plot == 'Other', 0.5, 1)
+  )
+
+
+# Plot for 'R' response
+ggplot(meta[meta$Response == 'R',], aes(x = x_FOV_px, y = y_FOV_px, color = color_plot, size = point_size, alpha = point_alpha)) + 
+  geom_point() +
+  theme_classic() + 
+  facet_wrap(~ tma_fov_id) + 
+  scale_color_manual(values = colors) +
+  scale_size_identity() +
+  scale_y_reverse() +
+  scale_alpha_identity()
+ggsave(paste('Protein_Immune_High_R', 'FOV_plotting.pdf', sep = '_'), width = 14, height = 13)
+
+# Plot for 'NR' response
+ggplot(meta[meta$Response == 'NR',], aes(x = x_FOV_px, y = y_FOV_px, color = color_plot, size = point_size, alpha = point_alpha)) + 
+  geom_point() +
+  theme_classic() + 
+  facet_wrap(~ tma_fov_id) + 
+  scale_color_manual(values = colors) +
+  scale_y_reverse() +
+  scale_size_identity() +
+  scale_alpha_identity() 
+ggsave(paste('Protein_Immune_High_NR', 'FOV_plotting.pdf', sep = '_'), width = 14, height = 13)
+
+```
+
+```{r prep for Fig 2d--Neighborhood Coordination input prep}
+ni.input <- CosMX_RNA_merged[[c('x_pixel', 'y_pixel', 'tma_fov_id', 'PatientID', 'Response', 'annot_cluster2')]]
+write.csv(ni.input, file = '/Volumes/hqdinh2/Projects/!GEO_Dryad_Submissions/Golfinos_Owen_et_al_HNSCC_ICI/SeuratObjects_dataFrames/RNA_ni.input.csv')
+```
+
+```{r Fig 2c--RNA neighborhood heatmap}
+CosMX_RNA_merged$annot_cluster2[grep('inflammatory', CosMX_RNA_merged$annot_cluster2)] <- 'Fibroblast_VEGFA_iCAFs'
+
+# Create a table of cell counts
+cell_counts <- CosMX_RNA_merged@meta.data %>%
+  group_by(k10_NhCoord20_anno, annot_cluster2) %>%
+  summarise(count = n()) %>%
+  spread(annot_cluster2, count, fill = 0)
+
+# Convert k10_NhCoord20_anno to row names and remove it as a column
+cell_counts_matrix <- as.matrix(cell_counts[,-1])
+rownames(cell_counts_matrix) <- cell_counts$k10_NhCoord20_anno
+
+# Calculate centroids (average profile for each k10_NhCoord20_anno cluster)
+centroids <- cell_counts %>%
+  group_by(k10_NhCoord20_anno) %>%
+  summarise(across(everything(), mean))
+
+# Convert centroids to matrix and set row names
+centroids_matrix <- as.matrix(centroids[,-1])
+rownames(centroids_matrix) <- centroids$k10_NhCoord20_anno
+
+# Calculate tissue averages
+tissue_avgs <- colMeans(cell_counts_matrix)
+
+# Calculate fold changes
+calculate_fold_change <- function(row, tissue_avgs) {
+  niche_clusters <- row + tissue_avgs
+  niche_sum <- sum(niche_clusters)
+  log2((niche_clusters / niche_sum) / tissue_avgs)
+}
+
+fc_matrix <- t(apply(centroids_matrix, 1, calculate_fold_change, tissue_avgs))
+
+# Rescale the fold changes to be between -3 and 3
+rescale_to_range <- function(x, new_min = -3, new_max = 3) {
+  old_min <- min(x)
+  old_max <- max(x)
+  new_min + ((x - old_min) * (new_max - new_min) / (old_max - old_min))
+}
+
+fc_matrix_rescaled <- apply(fc_matrix, 2, rescale_to_range)
+
+# Cap values at -3 and 3
+fc_matrix_rescaled[fc_matrix_rescaled < -3] <- -3
+fc_matrix_rescaled[fc_matrix_rescaled > 3] <- 3
+
+write.csv(fc_matrix, 'fc_matrix.csv')
+write.csv(fc_matrix_rescaled, 'fc_matrix_rescaled.csv')
+
+# Prepare the heatmap
+# Define the color mapping function
+col_fun = colorRamp2(c(-3, 0, 3), c("blue", "white", "red"))
+
+# Create the heatmap
+heatmap <- Heatmap(fc_matrix_rescaled,
+                   name = "Log2 Fold Change",
+                   col = col_fun,
+                   cluster_rows = TRUE,
+                   cluster_columns = TRUE,
+                   show_row_names = TRUE,
+                   show_column_names = TRUE,
+                   column_names_rot = 45,
+                   row_names_side = "left",
+                   column_title_side = 'bottom',
+                   column_title = "Cell Types",
+                   row_title = "Neighborhoods",
+                   heatmap_legend_param = list(
+                     title = "Normalized cell type enrichment score",
+                     title_position = "leftcenter-rot",
+                     title_gp = gpar(fontsize = 10),
+                     at = c(-3, 0, 3),
+                     labels = c("-3", "0", "3"),
+                     legend_height = unit(4, "cm"),
+                     grid_width = unit(0.5, "cm")
+                   ))
+
+# Draw the heatmap
+pdf("celltypes_per_neighborhood_complexheatmap.pdf", width = 7, height = 4)
+draw(heatmap)
+dev.off()
+
+transposed_heatmap <- Heatmap(as.data.frame(t(fc_matrix_rescaled)),
+                              name = "Log2 Fold Change",
+                              col = col_fun,
+                              cluster_rows = TRUE,
+                              cluster_columns = TRUE,
+                              show_row_names = TRUE,
+                              show_column_names = TRUE,
+                              column_names_rot = 45,
+                              row_names_side = "left",
+                              column_title_side = 'bottom',
+                              row_title = "Cell Types",
+                              column_title = "Neighborhoods",
+                              show_row_dend = FALSE,  # This line removes the row dendrogram
+                              show_column_dend = FALSE,  # This line removes the column dendrogram (if you want)
+                              heatmap_legend_param = list(
+                                title = "Normalized cell type enrichment score",
+                                title_position = "leftcenter-rot",
+                                title_gp = gpar(fontsize = 10),
+                                at = c(-3, 0, 3),
+                                labels = c("-3", "0", "3"),
+                                legend_height = unit(4, "cm"),
+                                grid_width = unit(0.5, "cm")
+                              ))
+pdf('tranposed_celltypes_per_neighborhood_complexheatmap.pdf', width = 5, height = 5)
+draw(transposed_heatmap)
+dev.off()
+
+```
+
+```{r Fig 2d--RNA neighborhood frequency, warning=FALSE}
+CosMX_RNA_merged$orig.ident <- CosMX_RNA_merged$tma_fov_id
+
+
+CosMX_RNA_merged <- CosMX_RNA_merged %>%
+  Seurat::AddMetaData(
+    metadata = case_when(
+      CosMX_RNA_merged$k10_NhCoord20_anno == "Tumor_Immune_Mixed" ~ 'Tumor_Immune_Tcell_High',
+      CosMX_RNA_merged$k10_NhCoord20_anno == "Macrophage_High" ~ "Immune_Macrophage_High",
+      CosMX_RNA_merged$k10_NhCoord20_anno == "DC_T_iCAF_Tumor_Mixed" ~ "ap_iCAF_Immune_Mixed",
+      CosMX_RNA_merged$k10_NhCoord20_anno == "CAF_Immune_Mixed" ~ "myCAF_Immune_Mixed",
+      TRUE ~ as.character(CosMX_RNA_merged$k10_NhCoord20_anno)
+    ),
+    col.name = "k10_NhCoord20_anno_new"
+  )
+
+freq_plot <- function(SEU, metadata, split.meta = 'tissue_hpv', graph_type = c('stacked_barplot', 'freq_boxplot'), 
+                      out, out_width = 12, out_height = 8, out_units = 'in', out_res = 300, test_by_group = TRUE){
+  
+  set.seed(329)
+  
+  require(ggplot2)
+  require(DescTools)
+  require(Seurat)
+  
+  
+  Idents(SEU) <- metadata
+  new.ident <- sort(unique(Idents(SEU)))
+  samples <- unique(SEU@meta.data$orig.ident)
+  tmp <- match(SEU$orig.ident, samples)
+  sample_ind <- unique(tmp)
+  ids <- Idents(SEU)
+  tmp_v <- matrix(0, nrow = length(samples), ncol = length(new.ident))
+  rownames(tmp_v) <- samples
+  total_in_sample <- rep(0, length(samples))
+  tmp <- SEU$orig.ident
+  tmp <- plyr::count(tmp)
+  total_in_sample = tmp$freq
+  names(total_in_sample) <- tmp$x
+  total_in_sample <- total_in_sample[match(samples, names(total_in_sample))]
+  for (i in 1:length(new.ident)) {
+    tmp <- ids[which(ids == new.ident[i])]
+    tmp <- SEU$orig.ident[match(names(tmp), rownames(SEU@meta.data))]
+    tmp <- plyr::count(tmp)
+    for (j in 1:nrow(tmp)) {
+      ind <- which(rownames(tmp_v) == tmp$x[j])
+      tmp_v[ind,i] <- tmp$freq[j]
+    }
+  }
+  colnames(tmp_v) <- new.ident
+  ind <- order(colnames(tmp_v))
+  t2 <- tmp_v
+  for (i in 1:nrow(t2)) {
+    t2[i,] = t2[i,]/sum(t2[i,])
+  }
+  t2 <- as.data.frame(t2)
+  t2 <- as.matrix(t2)
+  
+  meta <- SEU@meta.data[,c('orig.ident', split.meta)]
+  rownames(meta) <- NULL
+  meta <- unique(meta)
+  df <- NULL
+  for (i in 1:nrow(t2)) {
+    for (j in 1:ncol(t2)) {
+      df <- rbind(df, c(rownames(t2)[i], meta[[split.meta]][which(meta$orig.ident == rownames(t2)[i])], 
+                        colnames(t2)[j], as.numeric(t2[i,j])))
+    }
+  }
+  colnames(df) <- c('Sample', 'Group', 'Cluster', 'Freqs')
+  df <- as.data.frame(df)
+  df$Group <- as.character(df$Group)
+  df$Freqs <- as.numeric(as.character(df$Freqs))
+  
+  if(isTRUE(test_by_group)){
+    all_p <- data.frame(subset = character(), p = numeric())
+    
+    for (x in unique(df$Cluster)) {
+      f <- df[df$Cluster == x,]
+      groups <- unique(df$Group)
+      f1 <- f[f$Group == groups[1],]$Freqs
+      f2 <- f[f$Group == groups[2],]$Freqs
+      wcx <- wilcox.test(f1, f2, paired = FALSE)
+      row <- c(x, wcx$p.value)
+      all_p <- rbind(all_p, row)
+      all_p[,2] <- format(round(as.numeric(all_p[,2]), 10), nsmall = 2)
+    }
+    
+    p_filtered <- all_p
+    
+    sub_title <- paste(p_filtered[,1], p_filtered[,2], sep = '=')
+  }
+  
+  write.csv(all_p, paste(out, 'freq_boxplot_wilcox.csv', sep = ''))
+  df$Freqs <- df$Freqs * 100 
+  print(all_p)
+  
+  if (graph_type == 'freq_boxplot'){
+    #pdf(paste(out, 'freq_boxplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, res = out_res)
+    ggplot(df) + 
+      geom_boxplot(aes(x = Group, y = Freqs, color = Group, fill = Group), position = position_dodge(), 
+                   alpha = 0.5, outlier.color = NA) + 
+      geom_point(aes(x = Group, y = Freqs, color = Group), alpha = 0.8, position = position_jitterdodge()) + 
+      facet_wrap(~ Cluster, scales = 'free', nrow = 3) + 
+      theme_bw() + 
+      theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.title.x = element_blank(), 
+            strip.text = element_text(size = 12), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+      scale_shape_manual(values = 1:5) + 
+      scale_color_manual(values = c('#2196F3', '#FF8A80')) +
+      scale_fill_manual(values = c('#2196F3', '#FF8A80')) +
+      #ggtitle(label = paste('Subset frequency by', split.meta, sep = ' ')) + 
+      theme(legend.key.size = unit(1, 'cm'), legend.title = element_text(size=30), 
+            legend.text = element_text(size=20), axis.text=element_text(size=16),axis.title=element_text(size=30), legend.position = 'none') + 
+      labs(y= "Neighborhood Frequency")
+    
+    ggsave(paste(out, 'freq_boxplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, dpi = out_res)
+    #dev.off()
+    write.csv(df, file = paste(out, 'freq_boxplot_data.csv', sep = ''))
+    return(df)
+  }
+  if (graph_type == 'stacked_barplot'){
+    pdf(paste(out, 'stacked_barplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, res = out_res)
+    ggplot(df) +geom_bar(aes(x = Group, y = Freqs, fill = Cluster), position = 'stack', stat = 'identity') + scale_fill_manual(values=color_clusters[1:as.numeric(length(unique(df$Cluster)))]) + theme_classic() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    
+    ggsave(paste(out, 'stacked_barplot.pdf', sep = ''), width = out_width, height = out_height, units = out_units, dpi = out_res)
+    dev.off()
+    write.csv(df, file = paste(out, 'stacked_barplot_data.csv', sep = ''))
+    return(df)
+  }
+}
+
+fp_nhcoord20 <- freq_plot(CosMX_RNA_merged, metadata = 'k10_NhCoord20_anno_new', split.meta = 'Response', graph_type = 'freq_boxplot', 
+                out = 'k10_RNA_', out_width = 9, out_height = 7)
+```
+
+```{r Fig 2d--RNA FOV plotting (DC/T/iCAF/tumor neighborhood)}
+# FOV plotting
+meta <- CosMX_RNA_merged[[c('tma_fov_id', 'x_pixel', 'y_pixel', 'k10_NhCoord20_anno', 'Response', 'annot_cluster2')]]
+
+unique(meta$k10_NhCoord20_anno)
+#[1] "Bcell_Plasma"             "Endothelial"              "Tumor_Immune_Mixed"       "DC_T_iCAF_Tumor_Mixed"    "Macrophage_High"          "CAF_Immune_Mixed"         "CAFs"                    
+#[8] "Tumor_High"               "Myeloid_K17+_Tumor_Mixed"
+
+unique(meta$annot_cluster2)
+#[1] "Endothelials"                           "Bcells"                                 "Plasma"                                 "Fibroblast_myCAFs"                     
+#[5] "Monocytes"                              "Tcells_CD4+"                            "Tumors_Others"                          "Fibroblast_apCAFs"                     
+#[9] "Macrophages"                            "Tumors_KRT19+"                          "DCs"                                    "Tregs"                                 
+#[13] "Tumors_HIF1A+"                          "Fibroblast_VEGFA_inflammatorylike_CAFs" "TcellsCD8+"                             "Tumors_KRT17+"    
+
+# looped version that makes a plot for every single neighborhood
+nhs <- unique(meta$k10_NhCoord20_anno)
+
+meta <- meta %>% mutate(annot_cluster3 = case_when(
+  grepl("CD8", annot_cluster2) ~ "CD8+ T cells",
+  grepl("DC", annot_cluster2) ~ "DCs",
+  grepl('CD4', annot_cluster2) ~ 'CD4+ T cells',
+  grepl('Treg', annot_cluster2) ~ 'Tregs',
+  grepl('Tumor', annot_cluster2) ~ 'Tumor cells',
+  grepl('Bcells|Plasma|Mono|Macro|Endo', annot_cluster2) ~ 'Other',
+  grepl("myCAF", annot_cluster2) ~"myCAFs",
+  grepl('inflammatory', annot_cluster2) ~ 'iCAFs',
+  grepl('apCAF', annot_cluster2) ~ 'apCAFs'))
+
+nh <- "DC_T_iCAF_Tumor_Mixed"
+# Create a new column for color plotting
+meta$color_plot <- ifelse(meta$k10_NhCoord20_anno == nh, meta$annot_cluster3, 'Other')
+# Define colors for the plot
+colors <- c('CD8+ T cells' = 'coral', 
+            'DCs' = 'purple',
+            'CD4+ T cells' = 'darkred',
+            'Tregs' = 'tomato3',
+            'Tumor cells' = 'palegreen',
+            'iCAFs' = 'skyblue',
+            'apCAFs' = 'blue',
+            'Other' = 'grey80')
+
+# Add new columns for size and alpha
+meta <- meta %>%
+  mutate(
+    point_size = ifelse(color_plot == 'Other', 0.3, 0.5),
+    point_alpha = ifelse(color_plot == 'Other', 0.5, 1)
+  )
+
+# Reorder the data so that 'CD4+ T cells' rows are plotted last
+meta <- meta %>%
+  arrange(ifelse(color_plot == 'CD4+ T cells', 1, 0))
+
+# Plot for 'R' response
+ggplot(meta[meta$Response == 'R',], aes(x = x_pixel, y = y_pixel, color = color_plot, size = point_size, alpha = point_alpha)) + 
+  geom_point() +
+  theme_classic() + 
+  facet_wrap(~ tma_fov_id) + 
+  scale_color_manual(values = colors) +
+  scale_size_identity() +
+  scale_alpha_identity()
+
+ggsave(paste('RNA_DC_T_iCAF_Tumor_R', 'multicolor_FOV_plotting.pdf', sep = '_'), width = 14, height = 13)
+
+# Plot for 'NR' response
+ggplot(meta[meta$Response == 'NR',], aes(x = x_pixel, y = y_pixel, color = color_plot, size = point_size, alpha = point_alpha)) + 
+  geom_point() +
+  theme_classic() + 
+  facet_wrap(~ tma_fov_id) + 
+  scale_color_manual(values = colors) +
+  scale_size_identity() +
+  scale_alpha_identity() 
+
+ggsave(paste('RNA_DC_T_iCAF_Tumor_NR', 'multicolor_FOV_plotting.pdf', sep = '_'), width = 14, height = 13)
+```
+
+```{r Fig 2e--DC DE genes (5 immune NHs)}
+CosMX_RNA_merged <- CosMX_RNA_merged %>%
+  Seurat::AddMetaData(
+    metadata = case_when(
+      CosMX_RNA_merged$k10_NhCoord20_anno == "Tumor_Immune_Mixed" ~ 'Tumor_Immune_Tcell_High',
+      CosMX_RNA_merged$k10_NhCoord20_anno == "Macrophage_High" ~ "Immune_Macrophage_High",
+      CosMX_RNA_merged$k10_NhCoord20_anno == "DC_T_iCAF_Tumor_Mixed" ~ "ap_iCAF_Immune_Mixed",
+      CosMX_RNA_merged$k10_NhCoord20_anno == "CAF_Immune_Mixed" ~ "myCAF_Immune_Mixed",
+      TRUE ~ as.character(CosMX_RNA_merged$k10_NhCoord20_anno)
+    ),
+    col.name = "k10_NhCoord20_anno_new"
+  )
+
+nhs <- unique(CosMX_RNA_merged$k10_NhCoord20_anno_new)
+#[1] "Endothelials"          "Bcells_Plasma"         "Myeloid_T_Mixed"       "CAFs"                  "DC_T_iCAF_Tumor_Mixed" "Macrophage_High"       "Immune_Mixed_CD4Thi"  
+#[8] "Tumor_High"            "CD8T+_Tumor_Mixed"      
+
+immune_nhs <- nhs[c(3:6, 9)]
+
+RNA_mini <- CosMX_RNA_merged[,CosMX_RNA_merged$k10_NhCoord20_anno_new %in% c(immune_nhs)] # new name DC_T_iCAF...
+
+RNA_mini$cellType_response <- paste(RNA_mini$annot_cluster2, RNA_mini$Response)
+
+Idents(RNA_mini) <- 'cellType_response'
+
+degs <- FindMarkers(RNA_mini, group.by = 'cellType_response', ident.1 = 'DCs R', ident.2 = 'DCs NR', logfc.threshold = 0.1)
+degs <- degs[grep('NegPrb', rownames(degs), invert = T),]
+
+cellchatdb <- CellChat::CellChatDB.human$interaction
+lrs <- c(cellchatdb$ligand, cellchatdb$receptor)
+labs2 <- intersect(rownames(degs), lrs)
+
+labs2 <- grep('CXC|CCL|CCR|CXCR', rownames(degs), value = T)
+
+# Create a subset of labs2 containing only significant genes
+significant_labs2 <- labs2[labs2 %in% rownames(degs[degs$p_val_adj < 0.05 & abs(degs$avg_log2FC) > 0.10,])]
+
+# Create a subset of labs2 containing only significant downregulated genes
+significant_down <- labs2[labs2 %in% rownames(degs[degs$p_val_adj < 0.05 & degs$avg_log2FC < -0.10,])]
+
+# Create a subset of all significant upregulated genes
+significant_up <- rownames(degs[degs$p_val_adj < 0.05 & degs$avg_log2FC > 0.10,])
+
+add_labs <- c('CXCL9', 'CXCL10', 'CXCL11', 'CXCL16', 'CXCR3', 'CXCR6')
+
+pdf('NoNegPrb_Volcano_plot_DCs.pdf', width = 12, height = 10)
+EnhancedVolcano(degs,
+    lab = rownames(degs),
+    selectLab = c(significant_down, significant_up, add_labs),
+    x = 'avg_log2FC',
+    y = 'p_val_adj',
+    pCutoff = 0.05,
+    drawConnectors = TRUE,
+    max.overlaps = Inf,
+    min.segment.length = 0,
+    directionConnectors = 'both',
+    arrowheads = FALSE, 
+    FCcutoff = 0.10,
+    pointSize = 4,
+    labSize = 5.0,
+    xlim = c(-1, 1),
+    title = '5 Immune NHs NR<-->R')
+dev.off()
+```
+
+```{r Fig 2f--Dotplots (DC_T_iCAF NH)}
+DotPlot(CosMX_RNA_merged[,CosMX_RNA_merged$k10_NhCoord20_anno == "Myeloid_K17+_Tumor_Mixed"  & CosMX_RNA_merged$annot_cluster2 %in% c('Macrophages', 'Monocytes', 'DCs', 'TcellsCD8+', 'Tcells_CD4+', 'Tregs')], 
+        group.by = 'annot_cluster2', features = c('CXCL9', 'CXCL10', 'CXCR3'), split.by = 'Response', cols = 'RdBu', col.min = 0)
+ggsave('CXCL9_CXCL10_CXCR3_Mac_Mon_DC_CD8_CD4_Myeloid_K17_Tumor_Mixed_NH.pdf', width = 7, height = 5)
+
+
+DotPlot(CosMX_RNA_merged[,CosMX_RNA_merged$k10_NhCoord20_anno == "DC_T_iCAF_Tumor_Mixed"  & CosMX_RNA_merged$annot_cluster2 %in% c('Macrophages', 'Monocytes', 'DCs', 'TcellsCD8+', 'Tcells_CD4+', 'Tregs')], 
+        group.by = 'annot_cluster2', features = c('CXCL9', 'CXCL10', 'CXCR3'), split.by = 'Response', cols = 'RdBu', col.min = 0)
+ggsave('CXCL9_CXCL10_CXCR3_apCAF_iCAF_Immune_Mixed_NH.pdf', width = 7, height = 5)
+```
