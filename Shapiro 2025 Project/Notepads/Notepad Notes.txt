@@ -1,0 +1,34 @@
+[5.27.2025 Day One Notes]
+
+
+Hien (Hin)- Post Doc researcher. Completed her PHD in Biomedical Sciences (I think) but currently works in immunology research. Husband lives in the Chicago area. Cooks mostly Vietnamize food at home. Recommends Saigon Noodle on the west side of Madison as the best place to get Vietnamize food. 
+
+Athena - Recent PHD Graduate starting a job at Abbvie. Moving to Gurnee and starting her new role on June 10. 
+
+R Coding
+	Packages: Seurat
+		Objects are special. Rows are genes, Columns are Cell information 
+		Each cell has its own metadata
+	Likely want to do things in R because converting back and forth will be a pain 
+
+Python
+	Packages: SquidPi (spatial data) good vinettes which may be better than Athena's code, ScanPi
+
+
+Temporary Admin Privileges 
+Personal Laptop use (what is ok?) 
+
+Question to ask Huy (Hweee) Dinh
+- Temporary admin privileges: are the forms you sent me the correct forms
+- Personal laptop use expectations
+	Can I share a GitHub between home and work laptop
+- Any papers of literature review that you would recommend
+
+
+
+[5.28.2025 Day 2 Notes]
+
+To do list
+	Learn how to use the R package Seurat
+	Review Josh's Notes
+	Figure out how to get Slack notifications on computer
