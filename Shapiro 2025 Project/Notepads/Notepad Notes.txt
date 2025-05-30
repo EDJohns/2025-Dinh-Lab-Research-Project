@@ -5,6 +5,8 @@ Hien (Hin)- Post Doc researcher. Completed her PHD in Biomedical Sciences (I thi
 
 Athena - Recent PHD Graduate starting a job at Abbvie. Moving to Gurnee and starting her new role on June 10. 
 
+Josh - PHD student finishing his PHD and mostly writing on his own at the moment. Seems to mostly keep to himself at least for the moment. Evidenced by expressed preference to work without Parth in the room at least for his Thesis. 
+
 R Coding
 	Packages: Seurat
 		Objects are special. Rows are genes, Columns are Cell information 
@@ -32,3 +34,54 @@ To do list
 	Learn how to use the R package Seurat
 	Review Josh's Notes
 	Figure out how to get Slack notifications on computer
+
+Meeting notes:
+Seurat is the main package used. Traditionally single cell analysis but more spatial tools now. We can't find PMNs in one of the protein/RNA. Should check notes on which one that it is. SquidPi/ScanPi is the python equivalent. R is better at stats and Python is better at image analysis. An additional Python package is SpatialData. Recommend using jypterLab rather than JypterNotebooks.
+
+You can convert the object between the two. AnnData <-> H5 (standard data object) <-> H5AD <-> ScEasy. 
+
+CellRanger is made by 10X genetics with a chromium. Cell ranger gets us from the mRNA and protein to the H5. Not super relevant to my project from my understanding.
+
+Suerat Tutorials:
+https://satijalab.org/seurat/articles/seurat5_spatial_vignette_2
+
+Spatial Data:
+https://spatialdata.scverse.org/en/stable/
+
+
+Goals Post Meeting: (1) Transfer work into Jupyterlab rather than notebook.(2) Keep learning AnnData Format (3) Get Chat GPT on the desktop (4) Figure out conversion between H5 and AnnData (5) Get data for Merfish example to Desktop.
+
+General Notes: In Python after a !pip install you must restart for anything to actually work. 
+
+[5.29.2025]
+
+Julia - Zhili Chen CMB Ph.D. program. Traveling to Mall of America soon. 
+
+Moving data to Seurat to Python is very difficult and it may be necessary to learn the suerat structure in R first. Conversion to Python may not be achieveable in the near term. Parthi may be able to help. ChatGPT says the conversion script is likely doomed and I should manually export the pieces that I want. 
+
+KNN Cluster Analysis -> will group cells. 20-30 cells are common. 
+Look at gene expression within those neighbors. Resolution of the clustering
+
+Tasks:
+(1) Continue trying data conversion
+(2) Learn Seurat data structure
+(3) Figure out order for mouse, handrest, and maybe keyboard, and pens
+(4) Red Cross Blood Vampires 
+
+[5.30.24 Day Four]
+
+Kicking off day 4 I was not terribly productive. Spending too much time on phone/internet. But even in bursts I can make up the time. I want to be out of here by 4:30 today so I will have to grind. I can watch some learning Spanish videos during lunch. 
+
+I want to get get some more analysis of the data in python for both the RNA and Protein. May even be able to run a crap analysis neutrophil association with each test case. One idea that I had was to make a powerpoint each week with what I have done/learned to explain my current direction to Huy Dinh. IDK if I will have time for this by Monday but it may be the best way to broach the topic of more irregular hours/time moving forward. 
+
+Goals
+	(1) Learning Seurat would be very helpful. Much of our code base is done in this and I need to understand the data 	structure that I am working with how every one else understands it. 
+	(2) Examine data in Python. This could mean doing different test and start determining the direction of the project.
+	(3) Write out a document (probably python markdown on the data notation) 
+	(4) Review other python squidpy packages that may be helpful in this analsyis
+	(5) Figure out what KNN clustering is. 
+	(6) Push-ups (warmup plus 3 sets) 
+
+
+
+
