@@ -6,7 +6,7 @@ library(patchwork)
 #pbmc.data <- CreateSeuratObject()
 
 # Load the PBMC dataset
-pbmc.data <- Read10X(data.dir = "/Users/ejohns/Downloads/filtered_gene_bc_matrices/hg19")
+pbmc.data <- Read10X(data.dir = "C:/Users/ejohns/Documents/Shapiro Data Files/Seurat Tutorial/pbmc3k_filtered_gene_bc_matrices/filtered_gene_bc_matrices/hg19")
 # Initialize the Seurat object with the raw (non-normalized data).
 pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc3k", min.cells = 3, min.features = 200)
 pbmc
@@ -115,9 +115,9 @@ pbmc_norm <- ScaleData(pbmc_norm, vars.to.regress = "percent.mt")
 ################## Linear Dimensional Reduction ####################
 
 # Basically creates axes of variation. 
-  # | **PC1** | Direction of **greatest variance** in the data |
-  # | **PC2** | Second-most variance, orthogonal to PC1        |
-  # | **PC3** | Third-most variance, orthogonal to PC1 and PC2 |
+  ## | **PC1** | Direction of **greatest variance** in the data |
+  ## | **PC2** | Second-most variance, orthogonal to PC1        |
+  ## | **PC3** | Third-most variance, orthogonal to PC1 and PC2 |
   
 pbmc_norm <- RunPCA(pbmc_norm, features = VariableFeatures(object = pbmc_norm))
 # Examine and visualize PCA results a few different ways
