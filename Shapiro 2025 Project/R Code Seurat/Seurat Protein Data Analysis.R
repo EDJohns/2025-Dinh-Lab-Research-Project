@@ -15,3 +15,7 @@ FeaturePlot(SeuratObject, features = c("CD3", "HER2"))
 # loaded_names <- load("C:\\Users\\ejohns\\Documents\\Shapiro Data Files\\R Data Objects\\HNSCC CosMx-selected\\CosMX_protein_annot_cluster.rda")
 # print(loaded_names)
 
+ElbowPlot(SeuratObject)
+
+#freature plot
+FeaturePlot(SeuratObject, features = c("CD15"))

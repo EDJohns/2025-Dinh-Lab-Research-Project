@@ -76,17 +76,17 @@ plotVin2
 ############################### Data Normalization #############################
 
 # Normilze data function turns it into a log function and store the infomration in pbmc[["RNA"]]$data.
-# | Part            | Meaning                                                            |
-#   | --------------- | ------------------------------------------------------------------ |
-#   | `pbmc`          | A Seurat object                                                    |
-#   | `pbmc[["RNA"]]` | Gets the `"RNA"` Assay object from the list of assays              |
-#   | `$data`         | Gets the `data` slot (log-normalized matrix) from the Assay object |
+## | Part            | Meaning                                                            |
+##  | --------------- | ------------------------------------------------------------------ |
+##   | `pbmc`          | A Seurat object                                                    |
+##   | `pbmc[["RNA"]]` | Gets the `"RNA"` Assay object from the list of assays              |
+##  | `$data`         | Gets the `data` slot (log-normalized matrix) from the Assay object |
 
 pbmc_norm <-NormalizeData(pbmc_subset, normalization.method = "LogNormalize",scale.factor=10000)
 
-plotVin1 <- VlnPlot(pbmc[["RNA"]]$data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),ncol=3)
-plotVin2 <- VlnPlot(pbmc_subset, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),ncol=3)
-plotVin1+plotVin2
+# plotVin1 <- VlnPlot(pbmc_norm[["RNA"]]$data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),ncol=3)
+# plotVin2 <- VlnPlot(pbmc_norm, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),ncol=3)
+# plotVin1+plotVin2
 
 
 ########################### Highly Variable Features Analysis ##################
@@ -135,14 +135,14 @@ ElbowPlot(pbmc_norm)
 
 ####################### Cluster The Cells ###########################
 
-pbmc_norm <- FindNeighbors(pbmc_norm, dism = 1:8)
+pbmc_norm <- FindNeighbors(pbmc_norm, dism = 1:20)
 pbmc_norm <- FindClusters(pbmc_norm, resolution = 0.5)
-head(Idents(pbmc_norm),5)
+head(Idents(pbmc_norm),20)
 
 ##################### Non Linear Dim Reduction (UMAP) #################
 # Note that umap is 2 plot of cellular difference 
 
-pbmc_norm <- RunUMAP(pbmc_norm, dims = 1:10)
+pbmc_norm <- RunUMAP(pbmc_norm, dims = 1:20)
 DimPlot(pbmc_norm, reduction = "umap")
 
 #################### Finding differently expressed Features ############
