@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[30]:
+# In[12]:
 
 
 get_ipython().system('jupyter nbconvert --to python my_functions.ipynb')
 
 
-# In[29]:
+# In[11]:
 
 
 def create_z_map(adata, tma_num, punch_num, heatmap_printout, radius=-1.0):
@@ -217,8 +217,8 @@ def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", ra
     adata_sub = adata[adata.obs.cell_ID.str.contains(f"c_{tma_num}_{punch_num}_")].copy()
     
     # Compute spatial matrix 
-    if spatial_method == "radius":
-        sq.gr.spatial_neighbors(adata_sub, coord_type="generic", radius=135)
+    if spatial_method == "radius" or spatial_method == "radial":
+        sq.gr.spatial_neighbors(adata_sub, coord_type="generic", radius=radius)
     elif spatial_method == "delaunay":
         sq.gr.spatial_neighbors(adata_sub, coord_type="generic", delaunay=True)
     else:
@@ -252,7 +252,7 @@ def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", ra
         neighbor_ids = neighbors[neighbors > 0].index.tolist()
         
         # Get their cell types from adata_sub.obs
-        neighbor_types = adata_sub.obs.loc[neighbor_ids, 'cell_type']  # replace 'cell_type' with your actual column
+        neighbor_types = adata_sub.obs.loc[neighbor_ids, 'merged_annot_cluster']  # replace 'cell_type' with your actual column
         
         # Count frequency of each neighbor cell type
         neighbor_type_counts = neighbor_types.value_counts().to_dict()
@@ -276,51 +276,6 @@ def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", ra
         "num_neigh": dense_df,
         "type_neigh": pmn_results2
     }
-
-# def average_cell_counts(adata,tma, punch):
-#     """
-#     Calculate the total and percentage counts of neighbor cell types for a given TMA punch.
-
-#     Parameters:
-#     - adata: matrix of cosmx protein data
-#     - tma: Identifier for the tissue microarray (TMA)
-#     - punch: Identifier for the punch (core) within the TMA
-
-#     Returns:
-#     - 'Total Cell Counts': pandas DataFrame with raw counts of each neighbor cell type,
-#       including a total count column and indexed by sample ID.
-#     - 'Cell Type Percentages': pandas DataFrame with percentages of each cell type 
-#       relative to the total, indexed by sample ID.
-#     """
-#     import pandas as pd
-#     from collections import Counter
-#     import my_functions
-
-#     total_counts = Counter()
-#     res = my_functions.type_neighboors(adata, tma, punch) 
-#     cell_matrix = res["type_neigh"]
-
-#     for index, row in cell_matrix.iterrows():
-#         total_counts.update(row['Neighbor Cell Types'])
-
-#     # Create the total counts matrix
-#     total_counts = dict(total_counts)
-#     total_cell_counts = pd.DataFrame([total_counts])
-#     total_cell_counts['Total Cell Count'] = total_cell_counts.sum(axis=1)
-#     total_cell_counts['Sample ID'] = f"c_{tma}_{punch}"
-#     total_cell_counts.set_index('Sample ID', inplace=True)
-
-#     # Create the percentages matrix (excluding the 'Total Cell Count')
-#     cell_percentages = total_cell_counts.drop(columns=['Total Cell Count']).div(
-#         total_cell_counts['Total Cell Count'], axis=0
-#     ) * 100
-#     cell_percentages['Sample ID'] = f"c_{tma}_{punch}"
-#     cell_percentages.set_index('Sample ID', inplace=True)
-
-#     return {
-#         "Total Cell Counts": total_cell_counts,
-#         "Cell Type Percentages": cell_percentages
-#     }
 
 def average_cell_counts(adata, tma, punch, spatial_method, radius=135):
     """
@@ -347,7 +302,7 @@ def average_cell_counts(adata, tma, punch, spatial_method, radius=135):
     import my_functions
 
     total_counts = Counter()
-    res = my_functions.type_neighboors(adata, tma, punch, spatial_method) 
+    res = my_functions.type_neighboors(adata, tma, punch, spatial_method, radius) 
     cell_matrix = res["type_neigh"]
 
     for index, row in cell_matrix.iterrows():
@@ -371,54 +326,8 @@ def average_cell_counts(adata, tma, punch, spatial_method, radius=135):
         "Total Cell Counts": total_cell_counts,
         "Cell Type Percentages": cell_percentages
     }
-    
-def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=False):
-    """
-    Display an interactive pie (or donut) chart of cell type percentages for a given sample.
 
-    Parameters:
-    - sample_id (str): Sample ID (e.g., "c_1_5")
-    - all_percentages (pd.DataFrame): DataFrame containing percentage data (output from your analysis)
-    - width (int): Width of the chart in pixels (default: 800)
-    - height (int): Height of the chart in pixels (default: 800)
-    - donut (bool): Whether to render as a donut chart (default: False)
-
-    Returns:
-    - Plotly interactive pie chart
-    """
-
-    import plotly.express as px
-    
-    if sample_id not in all_percentages.index:
-        raise ValueError(f"Sample ID '{sample_id}' not found in the dataframe.")
-
-    # Extract row and convert to DataFrame
-    percentages = all_percentages.loc[sample_id]
-    df = percentages.reset_index()
-    df.columns = ['Cell Type', 'Percentage']
-
-    # Create pie chart
-    fig = px.pie(
-        df,
-        values='Percentage',
-        names='Cell Type',
-        title=f"Cell Type Percentages for {sample_id}",
-        hover_data=['Percentage'],
-        hole=0.3 if donut else 0
-    )
-
-    # Update layout for size and readability
-    fig.update_traces(textinfo='percent+label')
-    fig.update_layout(
-        width=width,
-        height=height,
-        legend_title="Cell Types",
-        title_font_size=24
-    )
-
-    fig.show()
-
-def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=False):
+def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=False, legend=True):
     """
     Display an interactive pie (or donut) chart of cell type percentages for a given sample.
     
@@ -428,6 +337,7 @@ def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=
     - width (int): Width of the chart (default: 800)
     - height (int): Height of the chart (default: 800)
     - donut (bool): If True, renders a donut chart (default: False)
+    - legend (bool): True by deafault, False removes legend
 
     Returns:
     - Displays an interactive Plotly pie chart.
@@ -437,20 +347,19 @@ def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=
     
     # Predefined consistent colors for all possible cell types
     color_map = {
-        "CD4+ T cell": "#1f77b4",
-        "Endothelial": "#ff7f0e",
-        "B cell": "#2ca02c",
-        "Unknown": "#d62728",
-        "Other immune": "#9467bd",
-        "Macrophage/monocyte": "#8c564b",
-        "Fibroblast": "#e377c2",
-        "CD8+ T cell": "#7f7f7f",
-        "Vascular smooth muscle": "#bcbd22",
-        "neutrophil": "#17becf",
-        "Adipocyte": "#f7b6d2",
-        "NK cell": "#c49c94",
-        "Epithelial": "#aec7e8",
-        "Dendritic cell": "#98df8a"
+        "Plasma_cells": "#1f77b4",           # blue
+        "Fibroblasts/SMCs": "#ff7f0e",       # orange
+        "Endothelial_cells": "#2ca02c",      # green
+        "Monocytes": "#d62728",              # red
+        "Tumor_cells": "#9467bd",            # purple
+        "Neutrophils": "#8c564b",            # brown
+        "CD8+T_cells": "#e377c2",            # pink
+        "CD4+T_cells": "#7f7f7f",            # gray
+        "Tregs": "#bcbd22",                  # yellow-green
+        "Macrophages": "#17becf",            # cyan
+        "DCs": "#f7b6d2",                    # light pink
+        "B_cells": "#c49c94",                # beige
+        "NK_cells": "#aec7e8"                # light blue
     }
 
     if sample_id not in all_percentages.index:
@@ -482,12 +391,51 @@ def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=
         legend_title="Cell Types",
         title_font_size=24
     )
+    if legend==False:
+        fig.update_layout(
+        width=width,
+        height=height,
+        showlegend=False,  # disables legend display
+        title_font_size=24
+        )
+        
+
 
     fig.show()
+    
+def get_sample_info(adata,sample_name):
+    """
+    Retrieve the response status and patient ID for a given sample prefix by
+    scanning through possible cell ID entries in the AnnData object (`adata`).
 
+    Parameters:
+    - adata (AnnDataOject): The data object 
+    - sample_name (str): The prefix of the sample’s cell IDs (e.g., "c_1_5_").
+                         The function appends increasing integers (starting at 1)
+                         to this prefix while searching the AnnData index.
 
-# In[ ]:
-
-
-
+    Returns:
+    - dict:
+        "Response"    : The clinical response status for the first matching cell ID.
+                        Returns "NA" if no valid ID is found after 5,000 attempts.
+        "Patient ID"  : The patient identifier for the matching cell.
+                        Returns "NA" if no valid ID is found.
+    """
+    j=1
+    end_point=False
+    patient_ID="NA" # Deafault Value
+    response_status="NA"
+    while end_point==False:
+        try:
+            patient_ID=adata.obs.loc[f"{sample_name}{j}", "Patient.ID"]
+            response_status=adata.obs.loc[f"{sample_name}{j}", "Response"]
+            end_point=True
+        except:
+            j+=1
+            if j>5000:
+                end_point=True #prevent forever loop
+    return{
+        "Response":response_status,
+        "Patient ID":patient_ID
+    }
 
