@@ -82,6 +82,112 @@ Goals
 	(5) Figure out what KNN clustering is. 
 	(6) Push-ups (warmup plus 3 sets) 
 
+[6.3.2025 Day 6 Research]
+
+Yesterday was at home sick. In general not showing as much motivation in this project as I would like. Hoping to make good progress this morning and meet with the rest of the lab later today. 
+
+Did the Seurat Tutorial. Found out how to identify clusters by cell gene expression. My plan with this is to use this information to build out a map of the expression of those genes. I am skeptical of the mapping. 
+
+Goals
+(1) Keep Reviewing Suerat
+(2) Load in the RNA data into python for review (DONE)
+(3) Compile everything together to show Huy (Hwee) and Parth
+(4) Get a mouse when I get back
+
+Some main takeaways 5 days into this. 
+(1) Finding colocalization numbers between the PMN and other cell types should not be super difficult but it may not be super interesting either. 
+(2) Mapping the PMNs for protein to RNA may prove more difficult than improving the RNA mapping. 
+(3) 
+
+[6.5.2025 Day 8 Research]
+
+Goals for today
+(1) Find out how to flip graphs (DONE)
+(2) Make a list of good match's for protein to RNA mapping (DONE)
+(3) Single cell seq cont. 
+(4) Start Powerpoint week 2 (DONE)
+(5) Map responder status (DONE)
+(6) Plot RNA Data expression of gene targets 
+(7) Plot the uMap data in python (DONE)
+(8) Try to find groups of cell in single cell RNA
+
+[6.5.2025 Day 9/8ish]
+
+Today I am finally feeling like myself again as the half marathon wiped me out and I feel pumped to take a another crack at this project. Three main project focuses at this point (1) colocalization numbers for the different groups (2) mRNA markers for PMNs (3) Mapping from protein to mRNA. 
+
+I am worried that the mapping may not be realistic for a variety of reasons but mostly because of the different Z slices. PMNs typically don't come in clumps so a Z layer above or below may not actually be very helpful in determining cell identity but such a mapping may be possible for other cell groups. I should ask if there are other targets that I could focus on. 
+
+Main goals for today:
+(1) Run the 2D functions for Seurat (low prioity)
+(2) Load the raw data into Seurat rather than the Seurat object
+(4) Determine mechanism of the colocalization methods 
+(4a) Determine SquidPY mechanism for this determination. Can I use the existing SquidPy packages. Maybe some prelim numbers
+(4b) Custom program design. For example find the nearest T cell types to each PMN. 
+(4c) Alternative Design in other programs
+(5) Print out Red and grey outputs for the protein 
+
+[6.9.2024] Day 9 Research 
+
+Goals:
+(1) Create PMN count function with input of for the name (done)
+(2) Print out PMN graphs with PMNs in Red, everything else in grey (done)
+(3) Refine print out function for co-locatioization (done)
+(4) Get prelim co-localization numbers (mostly done)
+
+Overall a productive day in python. Going in with clear goals helped alot. 
+
+[6.10.2024] Day 10 Research 
+
+Slow start to the morning. I really need more sleep on a regular basis. Feel like my goals are a little less concrete this morning than I would like. 
+
+Goals:
+(1) Get basic statistical tests done on protein data. (done)
+(2) Start on week 3 powerpoint (done)
+(3) Run 2D Seurat packages 
+(4) Find best mapping candidates and put them in the powerpoint 
+(5) Load in raw data into a Seurat object before normalizations are done
+
+Personal:
+(1) At least 2 sets
+
+Parth Notes: Can run permutation tests to determine how much signal differences we are receiving. Should check how many neighbors each cell has to determine if I should change to different algorithm. 
+
+Clustering test: 
+
+(1) First past clustering of aggregate Z scores. Would group each run into different groups based on neutrophil expression. 
+(2) Determine the number of neighbors for PMNs and what kinds of neighboring cells they have
+(3) Determine if I wanna modify delauncy method triangulation. 
+(4) Look at clustering groups in (1) and compare protein expression. 
+
+[6.11.2025] Day 11 Research
+
+Need to learn to kick it into gear from first thing in the morning. Better rested than I am on most days though. I have good prelim results from the colocalization test now. 
+
+Now my main goals are (1) cluster analysis of the PMN Z score data. See if responders have a different profile than non-responders. (2) Figure out how to load the raw data into Seurat. (3) Run the 2D packages in Seurat (4) 
+
+[6.12.2025] Day 12 Research
+
+Pretty happy about the feedback I got yesterday. Makes me feel less lazy but I don't want to get complacent. I got to keep on this path and honestly ramp up my work. 
+
+Goals for today:
+(1) Compare clustering between R and NR in z score data
+(2) Get Nearest cell types to neutrophils (70% fibroblasts)
+(3) Determine average number cells each PMN interacts with per sample
+(4) Clean up code
+(5) Try radial method in comparison
 
 
+[6.13.2025] 
 
+Josh practice presentation notes. Mostly giving random feedback at this point 
+
+
+[6.17.2025]
+
+Not a great start to the morning. Need to get useful results for tomorrow's meeting with Huy. I am better rested than most days and am recovering from giving blood. 
+
+Tasks for today:
+(1) Make graph with cellular neighbors for responders vs non responders
+(2) Example of neighboring cell types into pptx
+(3) Clustering with the 64X gene expression work
+(4) Examine the raw data 
