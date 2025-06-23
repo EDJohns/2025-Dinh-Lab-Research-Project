@@ -191,3 +191,23 @@ Tasks for today:
 (2) Example of neighboring cell types into pptx
 (3) Clustering with the 64X gene expression work
 (4) Examine the raw data 
+
+[6.18.2025]
+
+Starting is always the hardest part in the morning. Hard to get my body ready to learn and process in the morning. I am feeling less direction now and feel like I have tasks for today but am lacking what to do for the rest of the week. I feel that I have learned alot about colocalization of the data but am no closer to being able to map it. Parth gave a good suggestion that maybe what I need is to look from the T-cell perpective rather than PMNs. I think this is a better point than I initially expected. We want to predict the response of a patient to treatment. Why just focus on PMN cells? Why not look at other cell-cell interactions. In addition I have barely touched the actual expression data from any sample.
+
+Goals for today
+(1) Plot the genes that Huy requested
+(2) Redo the proximity plot but instead from the Tcell perpective
+(3) Check how accurate the CSFR3 gene actually is. The numbers seemed illogical to me. 
+(4) Create proximity plot from the T-cell perpective rather than PMN. 
+(4a) Plot pie chart with CD8
+(4b) Plot pie chart with CD4
+(4c) plot pie chart with Treg
+
+Met with Huy this afternoon on progress last week. He had trouble following my powerpoint because I need to include more on the methodology of my slides rather than just plopping down figures. Huy did not love my Z-score analysis but found more promise in my pie charts of the cellular neighborhood. Now he has tasked me with a couple of different methods which have obvious problems in my minds (1) finding the T-cell vs PMN centroids and seeing if that is related to response (2) Finding the distances between a PMN and all T-cells and taking the average. This idea may be salvageable if I use criteria like minimum radius or nearest X num of T cells. One good new direction that he has suggested is to look more at the interaction with tumor cells either in comparision or on it's own. The main thing that he wants is a heatmap of the different cell types (by percentage) for each sample (TMA+punch).  
+
+[6.19.25] Juneteenth Thesis Defense
+
+[6.23.25] Week 5 Start - Almost Halfway and so much to do
+
