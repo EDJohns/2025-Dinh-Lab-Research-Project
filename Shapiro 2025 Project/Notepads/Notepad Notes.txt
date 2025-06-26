@@ -209,5 +209,36 @@ Met with Huy this afternoon on progress last week. He had trouble following my p
 
 [6.19.25] Juneteenth Thesis Defense
 
-[6.23.25] Week 5 Start - Almost Halfway and so much to do
+[6.23.25] Week 5 Start - Almost Halfway
+
+Got to work with some mice on Friday. Somewhat unclear where my next steps are going to be. The most interesting finding so far appear to be  that responders are more likely to interact with tumor cells. This relationship seems to be better predictor than T-cell interactions. I have some ideas from Huy from last week on stuff that I can do. 
+
+Potential Tasks for Today:
+(1) K means analysis of the Neighborhood Delta
+(2) Start work on dividing the clusters
+(3) Do some lit review on Tumor PMN interaction. 
+(4) 2D gene expression analysis
+
+Interesting results, from what I found the group of patients with high tumor colocalization with PMNs are more likely (maybe even significantly more likely) to be responsive to treatment. It's worth looking at literature on why this may be the case. Could PMN-tumor interactions help?
+
+From the literature that I am reading this is the opposite of what I would expect. From most papers PMN-Tumor interaction is associated with  worse prognosis. Why the difference. Couple possibilities by order of likelihood (1) This is an artifact of the data, or random variation. We are probably close to significance but there are alot of unknowns. (2) PMN and Tumor interactions may be predictive not of prognosis but in response status. There is some evidence that high PD1 is shown in these PMN cells. May the drugs kill off these bad colocalizing PMNs? It is a hypothesis. (3) There are separate states (T1 vs T3) which may be either influenced by the drugs or be otherwise predictive of response. 
+
+[6.24.25] Week 5 Tuesday 
+
+Some initial results yesterday. I have only 1.5 days until I have to share results again. There are some things that Huy recommended that I have not done and I am questioning whether I should focus on them because I question the value of some of them. 
+
+Huy's Goals 
+(1) Cell type graph/heatmap (done)
+(1a) T-cell relationship (done)
+(1b) Tumor relationship (done)
+(2) Grid Colocalization  
+(3) PMN - Neutrophil Distances 
+
+1b will be easy enough to do, goal 3 will be somewhat harder should not be too difficult. The local colocalization seems questionable in general and harder to implement. 
+
+My Goals for Today
+(1) Plot expression of some of those genes in mRNA and protein under the theory that they may show PMN-Tumor interactions
+
+
+
 

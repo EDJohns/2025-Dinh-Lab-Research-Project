@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[12]:
+# In[32]:
 
 
 get_ipython().system('jupyter nbconvert --to python my_functions.ipynb')
 
 
-# In[11]:
+# In[31]:
 
 
 def create_z_map(adata, tma_num, punch_num, heatmap_printout, radius=-1.0):
@@ -141,6 +141,9 @@ def pmn_counter(adata, name_string):
     - 'PMN Count' int with the number of PMNs in that punch
     - 'PMN Names' list of all the cell names that are PMNs
     """
+    # Ensure name_string ends with "_"
+    if not name_string.endswith("_"):
+        name_string += "_"
     pmn_count=0
     end=False
     cell_type=""
@@ -168,30 +171,74 @@ def pmn_counter(adata, name_string):
     }
     
 def cluster_response(matrix, run_col, cluster_col, response_col):
-    # Group by cluster and response status
+    """
+    Analyze response distribution and tumor cell information by cluster, including average immune cell values.
+    Parameters:
+    ----------
+    matrix : pandas.DataFrame
+        The input data containing at least the columns:
+        - cluster_col
+        - response_col (assumed binary: 0 = Non-Responder, 1 = Responder)
+        - Tumor_cells
+        - CD4+T_cells
+        - CD8+T_cells
+        - Tregs
+    run_col : str
+        Not used in this function but kept for compatibility with existing interfaces.
+    cluster_col : str
+        Name of the column indicating cluster assignments.
+    response_col : str
+        Name of the column indicating response status (assumed binary: 0 = Non-Responder, 1 = Responder).
+    Returns:
+    -------
+    dict
+            "Output Matrix": pandas.DataFrame
+                Contains cluster-level counts of Responders, Non-Responders, and Percent_Responder.
+            "cluster_output_with_tumor_info": pandas.DataFrame
+                Same as Output Matrix with additional columns:
+                - 'Avg Tumor Cell Delta'
+                - 'Avg CD4+T_cells'
+                - 'Avg CD8+T_cells'
+                - 'Avg Tregs'
+    """
     import pandas as pd
+
+    # Group by cluster and response status
     grouped = matrix.groupby([cluster_col, response_col]).size().unstack(fill_value=0)
 
     # Rename columns for clarity
-    grouped.columns = ['Num_NonResponder', 'Non_Responder'] if 0 in grouped.columns else ['Non_Responder', 'Num_NonResponder']
+    grouped.columns = ['Non_Responder', 'Responder']
 
-    # Ensure both columns exist (in case one type is missing)
-    if 'Num_Responder' not in grouped.columns:
-        grouped['Num_Responder'] = 0
-    if 'Num_NonResponder' not in grouped.columns:
-        grouped['Num_NonResponder'] = 0
+    # Ensure both columns exist
+    if 'Responder' not in grouped.columns:
+        grouped['Responder'] = 0
+    if 'Non_Responder' not in grouped.columns:
+        grouped['Non_Responder'] = 0
 
     # Calculate percent responders
-    grouped['Percent_Responder'] = (grouped['Non_Responder'] / (grouped['Non_Responder'] + grouped['Num_NonResponder'])) * 100
+    grouped['Percent_Responder'] = (grouped['Responder'] / (grouped['Non_Responder'] + grouped['Responder'])) * 100
 
     # Reset index to turn cluster into a column
     cluster_output = grouped.reset_index()
 
+    # Calculate average Tumor_cells and immune cell values per cluster
+    avg_metrics = matrix.groupby(cluster_col)[['Tumor_cells', 'CD4+T_cells', 'CD8+T_cells', 'Tregs']].mean().reset_index()
+    avg_metrics.rename(columns={
+        'Tumor_cells': 'Avg Tumor Cell Delta',
+        'CD4+T_cells': 'Avg CD4+T_cells',
+        'CD8+T_cells': 'Avg CD8+T_cells',
+        'Tregs': 'Avg Tregs'
+    }, inplace=True)
+
+    # Merge averages with cluster output
+    cluster_output_with_tumor_info = pd.merge(cluster_output, avg_metrics, on=cluster_col, how='left')
+
     return {
-        "Output Matrix": cluster_output
+        "Output Matrix": cluster_output,
+        "cluster_output_with_tumor_info": cluster_output_with_tumor_info
     }
     
-def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", radius=135):
+def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", radius=15):
     """
     Analyze the spatial neighbors of PMN cells within a specified TMA punch.
 
@@ -209,12 +256,14 @@ def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", ra
     import pandas as pd
     import importlib
     import squidpy as sq
-    import my_functions
     pmn_results = []
     pmn_results2 = []
     pmn_count=0 
     # Makes subset of the adata object
     adata_sub = adata[adata.obs.cell_ID.str.contains(f"c_{tma_num}_{punch_num}_")].copy()
+
+    # Changes Radius to use pixels instead of microns
+    radius=radius/0.168
     
     # Compute spatial matrix 
     if spatial_method == "radius" or spatial_method == "radial":
@@ -276,8 +325,7 @@ def type_neighboors(adata, tma_num, punch_num, spatial_method="n_neighboors", ra
         "num_neigh": dense_df,
         "type_neigh": pmn_results2
     }
-
-def average_cell_counts(adata, tma, punch, spatial_method, radius=135):
+def average_cell_counts(adata, tma, punch, spatial_method, radius=15):
     """
     Calculate total and percentage counts of neighbor cell types for a given TMA punch,
     using a specified spatial method for neighbor calculation.
@@ -299,10 +347,9 @@ def average_cell_counts(adata, tma, punch, spatial_method, radius=135):
     """
     import pandas as pd
     from collections import Counter
-    import my_functions
 
     total_counts = Counter()
-    res = my_functions.type_neighboors(adata, tma, punch, spatial_method, radius) 
+    res = type_neighboors(adata, tma, punch, spatial_method, radius) 
     cell_matrix = res["type_neigh"]
 
     for index, row in cell_matrix.iterrows():
@@ -327,7 +374,7 @@ def average_cell_counts(adata, tma, punch, spatial_method, radius=135):
         "Cell Type Percentages": cell_percentages
     }
 
-def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=False, legend=True):
+def plot_cell_type_pie(sample_id, all_percentages, title, width=800, height=800, donut=False, legend=True):
     """
     Display an interactive pie (or donut) chart of cell type percentages for a given sample.
     
@@ -378,7 +425,7 @@ def plot_cell_type_pie(sample_id, all_percentages, width=800, height=800, donut=
         df,
         values='Percentage',
         names='Cell Type',
-        title=f"Cell Type Percentages for {sample_id}",
+        title=title,
         hole=0.3 if donut else 0,
         color='Cell Type',
         color_discrete_map=color_map
@@ -421,6 +468,10 @@ def get_sample_info(adata,sample_name):
         "Patient ID"  : The patient identifier for the matching cell.
                         Returns "NA" if no valid ID is found.
     """
+    # Ensure sample_id ends with "_"
+    if not sample_name.endswith("_"):
+        sample_name += "_"
+    
     j=1
     end_point=False
     patient_ID="NA" # Deafault Value
@@ -437,5 +488,198 @@ def get_sample_info(adata,sample_name):
     return{
         "Response":response_status,
         "Patient ID":patient_ID
+    }
+    
+def get_sample_cell_percentages(adata, sample_id):
+    """
+    Calculate total cell counts and percentage breakdown of cell types for a given sample.
+
+    Parameters:
+    ----------
+    adata : AnnData
+        Annotated data matrix containing single-cell observations.
+    sample_id : str
+        Sample identifier prefix (e.g., "c_1_1" or "c_1_1_"). Underscore will be added if missing.
+
+    Returns:
+    -------
+    Tuple[pd.DataFrame, pd.DataFrame]
+        - First DataFrame: one row with total counts of each cell type.
+        - Second DataFrame: one row with the percentage of each cell type (summing to ~100).
+    """
+     # Ensure sample_id ends with "_"
+    if not sample_id.endswith("_"):
+        sample_id += "_"
+    
+    # Filter the AnnData object to only the cells from this sample
+    sample_cells = adata[adata.obs.index.str.startswith(sample_id)]
+    
+    # Count occurrences of each cell type
+    counts = sample_cells.obs["merged_annot_cluster"].value_counts()
+    
+    # Create a row-style DataFrame (1 row, multiple columns)
+    count_row = counts.T.to_frame().T
+    count_row.index = [sample_id]
+    
+    # Compute percentages
+    total = counts.sum()
+    percent_row = (counts / total * 100).T.to_frame().T
+    percent_row.index = [sample_id]
+    
+    return {
+        "Total Counts": count_row,
+        "Percentage Counts": percent_row
+    }
+    
+def get_xy_coords(adata,cell_ID):
+    """
+    Retrieve the XY pixel coordinates for a given cell.
+    Parameters:
+    ----------
+    adata : AnnData
+    cell_ID : str
+        Unique identifier for the cell.
+    Returns:
+    -------
+    dict
+        Dictionary containing:
+        - "X": X-coordinate in pixels (int)
+        - "Y": Y-coordinate in pixels (int)
+    """
+    x_coord=adata.obs.loc[cell_ID, "x_FOV_px"]
+    y_coord=adata.obs.loc[cell_ID, "y_FOV_px"]
+    return{
+        "X":x_coord,
+        "Y":y_coord
+    }
+    
+def find_distance(adata,cell_ID_1,cell_ID_2,unit_conversion=0.168):
+    """
+    Calculate the Euclidean distance between two cells based on their XY coordinates.
+    Parameters:
+    ----------
+    cell_ID_1 : str
+        Unique identifier for the first cell.
+    cell_ID_2 : str
+        Unique identifier for the second cell.
+    unit_conversion : float, optional
+        Conversion factor from pixels to microns. Default is 0.168 µm/px.
+
+    Returns:
+    -------
+    dict
+        Dictionary containing:
+        - "Distance px": Distance between cells in pixels (float)
+        - "Distance um": Distance between cells in microns (float)
+    """
+    from math import sqrt
+    # Get Cell Locations
+    cell_1_xy=get_xy_coords(adata,cell_ID_1)
+    cell_2_xy=get_xy_coords(adata,cell_ID_2)
+
+    # Distance Function
+    Distance_px = sqrt((cell_2_xy["X"] - cell_1_xy["X"])**2 + (cell_2_xy["Y"] - cell_1_xy["Y"])**2)
+
+    # Convert pixel distance to micron
+    Distance_um = Distance_px*unit_conversion
+
+    return{
+            "Distance px":Distance_px,
+            "Distance um": Distance_um
+        }
+
+def matching_cell_list(adata,name_string,cell_type_string):
+    
+    """
+    Retrieve the number of PMN cells for a given TMA punch 
+    Parameters:
+    - adata: AnnData object
+    - name_string: The name of the punch which without the cell number. Ex "c_1_1" 
+    - cell_type_string: string with the cell type which you want counts for.
+    Returns:
+    - 'Cell Count' int with the number of PMNs in that punch
+    - 'Cell Names' list of all the cell names that are PMNs
+    """
+    # Ensure name_string ends with "_"
+    if not name_string.endswith("_"):
+        name_string += "_"
+    cell_count=0
+    end=False
+    cell_type=""
+    cell_names=[]
+    i=0
+     # This variable sets the breakpoint requires >100 failed requests in a row. Note that there are rondom cells throughout the data sets
+    j=0
+
+    while end==False:
+        i+=1
+        test_string=f"{name_string}{i}"
+        try: 
+            cell_type=adata.obs.loc[test_string, "merged_annot_cluster"]
+            j=0
+            if cell_type_string in cell_type:
+                cell_count+=1
+                cell_names.append(f"{name_string}{i}")
+        except:
+           j+=1
+        if j>100: 
+            end=True
+    return {
+        "Cell Count": cell_count,
+        "Cell Names": cell_names
+    }
+def nearest_cells_of_particular_type(adata,sample_ID,cell_distance_type):
+    """
+    Calculates distance matrix between PMNs and target cells of a particular type,
+    along with summary statistics.
+
+    Parameters:
+    -----------
+    adata : AnnData
+        Annotated data object containing spatial information for cells.
+    sample_ID : str
+        Identifier for the specific sample to analyze.
+    cell_distance_type : str
+        Cell type to use as the target for distance calculations (e.g., "CD4+T_cells").
+
+    Returns:
+    --------
+    dict
+        A dictionary containing:
+        - 'Distance Matrix' (pd.DataFrame): Matrix of distances between PMNs and target cells,
+          including additional columns for 'Minimum Distance' and 'Average Distance' per PMN.
+        - 'Average Distance' (float): Overall average distance across the entire matrix.
+        - 'Average Mininum Distance' (float): Average of each PMN's minimum distance to target cells.
+    """
+    import pandas as pd
+
+    # Creates lists of cell types for PMN and the target comparison
+    pmn_list=pmn_counter(adata,sample_ID)['PMN Names']
+    target_cell_list=matching_cell_list(adata,sample_ID,cell_distance_type)['Cell Names']
+    
+    # Initialize results storage: one column for this cell type
+    distance_matrix = pd.DataFrame(index=pmn_list, columns=target_cell_list)
+    
+    for pmn in pmn_list:
+        for target_cell in target_cell_list:
+            distance_matrix.loc[pmn,target_cell]=find_distance(adata,pmn, target_cell)["Distance um"]
+    
+    # Ensure numeric types
+    distance_matrix = distance_matrix.apply(pd.to_numeric, errors='coerce')
+    
+    # Calculate overall average distance across entire matrix
+    overall_avg_distance = distance_matrix.mean().mean()
+
+    # Calculate average mininum distance
+    average_min_distance = distance_matrix.min(axis=1).mean()
+            
+    # Add columns first (unrounded)
+    distance_matrix['Minimum Distance'] = distance_matrix.min(axis=1).round(2)
+    distance_matrix['Average Distance'] = distance_matrix.mean(axis=1).round(2)
+    
+    return{
+        "Distance Matrix":distance_matrix,
+        "Average Distance":overall_avg_distance,
+        "Average Mininum Distance": average_min_distance
     }
 
