@@ -234,11 +234,67 @@ Huy's Goals
 (2) Grid Colocalization  
 (3) PMN - Neutrophil Distances 
 
-1b will be easy enough to do, goal 3 will be somewhat harder should not be too difficult. The local colocalization seems questionable in general and harder to implement. 
+1b will be easy enough to do, goal 3 will be somewhat harder should not be too difficult. The local colocalization seems questionable in general and harder to implement. Ok so some good work today but everything always takes longer than I expect. I would still like to see the expression plots of those genes by EOD. May be useful
 
 My Goals for Today
-(1) Plot expression of some of those genes in mRNA and protein under the theory that they may show PMN-Tumor interactions
+(1) Plot expression of some of those genes in mRNA and protein under the theory that they may show PMN-Tumor interactions. See word doc for the proteins
+(2) maybe actually figure out how the raw data was made into a Seurat object
 
 
 
+[6.25.25] Week 5 Meeting
+
+Week 5 meeting did not go great primarily because I was sloppy with my graphs and Huy spent more time picking them apart then actually trying to listen to me. Something to reflect on for the future. I don't always fully trust his suggestions or our data in general so I have not idea how good the research I get out of this summer is going to be unfortunately. Like WTF is my PowerPoint even going to say at this point. Science is hard and I am beginning to think I am not a huge fan of research in general. 
+
+He gave me some equations but I am not 100% sure what to make of them. Another plan could be to rush this project in hopes of being able to do other cool stuff that would be able to get me published. 
+
+The most significant piece of data I have so far is not with the immune-pmn interactions but instead the tumor-pmn interactions. Why didn't this show up sooner in my data. The Z-score short have captured this comparing pmn-tumor interaction to baseline. Looking back at week 3 updates The average Z-score was indeed lower in responders versus non responders. But perhaps the Z-score is a poor measure because neither were likely to associate with tumors so it did not seem that strange that they were off. 
+
+A neighborhood analysis may actually be better because comparing to random distribution may not be the most productive methodology. I would not expect 
+
+Steps before EOD.
+(1) Fix the powerpoint to have the real numbers
+(2) Review the paper Huy sent me. Figure out how they got the justification that they did with the 15 um and 30 um boundaries
+(3) Box plots of some kind
+
+[6.26.25] Thursday
+
+Went to bed too late watching CR podcast. Dumb AF idea. Need more sleep for heavens sake but I don't feel so bad. Am slowly appearing to lose weight as well which is nice. At least my shorts and pants don't feel so tight. It is odd because I have only lost 3-5 lbs and that shouldn't led to huge changes. My goal is to look good in a swimsuit for the July 4th parties.
+
+Work is moving along. Need to produce something that is significant and more importantly justify my reasons for choosing the choices that I do. Huy picks me apart for my choices there.
+
+Initial goals
+(1) Find paper justifications for 15 and 30 um boundaries (20)
+(1a) Change function to take microns as radius rather than pixels (done)
+(1b) Review other plots for ideas 
+(2) Create function to make box plots (done)
+(3) Work on new algo on distances that Huy requested. 
+(4) Understand 2D gene expression plotting better. 
+
+My understanding of the new algo that Huy wants is that it will set the number of pairs to be equal to the lesser cell number. IE if there is 10 pmns and 4 CD8 then there will only be 4 rows and vice versa. 
+
+The paper does not appear to give good rationale of why they chose the 15 and 30 um. Looking at open evidence there does not appear to be a consensus choice. In some cases it can be less then 15 um and in others than can reach to over 100 um. The way I will make this is by chosing a radius that is generally within the bounds or normal and I can show than changing it doesn't significantly alter the output. Plotting cellular neighborhood by radius reveals an interesting pattern. At small radiuses PMNs % is higher and tumor,fibroblast % is lower. Another interesting tid bit is that DCs ~8% of the neighborhood for responders versus ~5% in nonresponders.
+
+
+[6.27.25] Friday (almost at halfway for this summer's project)
+
+Still don't know that I am supposed get out of this project.
+
+Goals for today
+(1) Violin plots similar to the box plots (Done not a great way to see the data) 
+(2) Find best way to plot data 2D in Seurat
+(3) New Algo for distances (done)
+(4) More lit review of relavent papers in the field  
+(5) View raw data (done)
+
+The raw data files are strange it appears that the gene expression data is divided by TMA, then FOV and then into 64 CSV files with gene expression meaning that there are a total of 68*64 total files that make up the protein expression data. There is also a 22GB file folder which might also be important. 
+
+Protein Raw Data Strutuce:
+* Protein Expression -> Per Cell Stats
+* Spatial location ->Cell_Stats_FXXX.csv” files in the folder of “CellStatsDir”.
+* There are some good image files that may be a useful visual
+* The images in CellStatsDir do not line up perfectly. Some line up like F010 but other do not and the TMA core is not listed making difficult to match. 
+
+
+The next step here would be to create a new algo to calculate the distances between cells but have it limited to the smaller number. IE a cell cannot be counted in a pair twice. This could be hard as that is not how my code works at this point. 
 
