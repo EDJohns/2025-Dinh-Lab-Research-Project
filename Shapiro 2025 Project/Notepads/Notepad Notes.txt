@@ -298,3 +298,37 @@ Protein Raw Data Strutuce:
 
 The next step here would be to create a new algo to calculate the distances between cells but have it limited to the smaller number. IE a cell cannot be counted in a pair twice. This could be hard as that is not how my code works at this point. 
 
+[6.30.25] Hungery for results
+
+Need to find something cool and significant in the data to get any conferences or results from this paper. Need to ask for some time off as well.
+
+Goals:
+(1) Read through paper 
+(2) Review Video
+(3) Find outlier plots for Huy
+(4) Compile new algo results for Huy
+(5) Get P values
+
+[7.1.25] New Month New Me (and new budget) 
+
+Got my teeth cleaned this morning. Good news in general. Got two weak spots which may turn into cavities in the future but no immediate concerns at the moment. Haven't got anything done today though and it is 2 PM. Time to grind.
+
+Still feel a bit lost. Need to cleanup and consolidate my PPX for Huy tomorrow as I will be gone for a good while. But having some kind of significant results. Might be good to do a practice run tomorrow during lunch before I see him. I still have not done much from the gene expression side. Want to be productive on this. 
+
+My current results are statistically significant but somewhat flawed as I am weighing ever sample the same regardless of PMN cells. 
+
+My hunch on the distance Algo was correct. While the pairwise method is not guaranteed to be lower distance on average it can be and should be in most cases are we are eliminating most far matches. In our averages they are longer in every case that I can find. 
+
+Targets for today
+(1) Review new distance Algo for Huy (done)
+(1a) Figure out why distances are always greater (done)
+(2) Review raw data structure with Parth
+(3) Review Video 
+(4) Start on creating box overlay 
+(5) PPX Cleanup (done)
+
+
+
+
+
+
