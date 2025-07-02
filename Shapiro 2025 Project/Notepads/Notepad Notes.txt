@@ -327,6 +327,27 @@ Targets for today
 (4) Start on creating box overlay 
 (5) PPX Cleanup (done)
 
+[7.2.2025] Day Before Minneapolis
+
+Starting getting actual work done at 10:18 Am today. Why do I always come at ~9:15 when I don't start work for another hour after reading the news. This will be my last day with Josh. I would have brought it something like for Athena and Hien but TBH I completely forgot. 
+
+I need to review my results with Huy and I want this to go better than previous times. 
+
+Targets for morning.
+1. finalize powerpoint
+2. Review raw data with Parth
+
+Targets for Afternoon
+1. Review video
+2. Box overlay display
+3. Figure out next directions
+
+Post meeting notes: Meeting with Huy went as well as it could have today. Have some more future directions looking more at data expression now as well.
+(1) Find a R and NR with similar numbers of CD8 and PMN cells and see if we can observed greater PMN-CD8 interaction in the NR group. 
+(2) Creating algo to mark a PMN cell as CD8 interacting, tumor interacting, or both. See if the genetic profile differs
+(3) Repeat PMN count significant with % values instead of total values
+(4) 15 micron vs 30 micron radius differences.       -+
+
 
 
 

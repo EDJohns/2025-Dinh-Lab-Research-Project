@@ -2,7 +2,7 @@
 
 library(Seurat)
 library(SeuratObject)
-library(SeuratDisk)
+#library(SeuratDisk)
 
 # Load the Seurat object from the .rda file
 load("C:\\Users\\ejohns\\Documents\\Shapiro Data Files\\R Data Objects\\HNSCC CosMx-selected\\CosMX_RNA_merged.rda")
@@ -38,6 +38,7 @@ DimPlot(mRNA_Seurat_Object, reduction = "umap")
 VlnPlot(mRNA_Seurat_Object, features = c("CSF3R"))
 VlnPlot(mRNA_Seurat_Object, features = c("S100A8"))
 VlnPlot(mRNA_Seurat_Object, features = c("S100A9"))
+VlnPlot(mRNA_Seurat_Object, features = c("CCR7"))
 
 #################### Finding differently expressed Features ############
 
