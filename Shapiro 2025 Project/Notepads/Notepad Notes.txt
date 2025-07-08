@@ -348,7 +348,16 @@ Post meeting notes: Meeting with Huy went as well as it could have today. Have s
 (3) Repeat PMN count significant with % values instead of total values
 (4) 15 micron vs 30 micron radius differences.       -+
 
+[7.7.2025] Day away tasks
 
+1. Review video
+2. Find R and NR example. Give numbers in terms of responder status
+3. Work on new algo for labeling CD8 cells as tumor interacting or non-interacting 
+4. Work on new function that will return % of total cells that are PMN cells for new cutoffs. 
+5. Find a way to plot genetic profile of the cellular groups. IE the CD8 interacting versus non-interacting. 
+
+Candidates or NR and R comparison. 
+R candidates:
 
 
 

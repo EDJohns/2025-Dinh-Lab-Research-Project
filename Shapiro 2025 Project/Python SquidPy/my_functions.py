@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[32]:
+# In[2]:
 
 
 get_ipython().system('jupyter nbconvert --to python my_functions.ipynb')
 
 
-# In[31]:
+# In[1]:
 
 
 def create_z_map(adata, tma_num, punch_num, heatmap_printout, radius=-1.0):
@@ -148,6 +148,7 @@ def pmn_counter(adata, name_string):
     end=False
     cell_type=""
     pmn_names=[]
+    overall_cell_count=0
     i=0
      # This variable sets the breakpoint requires >100 failed requests in a row. Note that there are rondom cells throughout the data sets
     j=0
@@ -158,6 +159,7 @@ def pmn_counter(adata, name_string):
         try: 
             cell_type=adata.obs.loc[test_string, "merged_annot_cluster"]
             j=0
+            overall_cell_count+=1
             if "Neutrophil" in cell_type:
                 pmn_count+=1
                 pmn_names.append(f"{name_string}{i}")
@@ -165,9 +167,15 @@ def pmn_counter(adata, name_string):
            j+=1
         if j>100: 
             end=True
+
+    # Calculate the overall percent of PMN cells
+    decimal_pmn=pmn_count/overall_cell_count
+
+    
     return {
         "PMN Count": pmn_count,
-        "PMN Names": pmn_names
+        "PMN Names": pmn_names,
+        "PMN decimal": decimal_pmn
     }
     
 def cluster_response(matrix, run_col, cluster_col, response_col):
@@ -591,14 +599,15 @@ def find_distance(adata,cell_ID_1,cell_ID_2,unit_conversion=0.168):
 def matching_cell_list(adata,name_string,cell_type_string):
     
     """
-    Retrieve the number of PMN cells for a given TMA punch 
+    Retrieve the number of tartget cells for a given TMA punch 
     Parameters:
     - adata: AnnData object
     - name_string: The name of the punch which without the cell number. Ex "c_1_1" 
     - cell_type_string: string with the cell type which you want counts for.
     Returns:
-    - 'Cell Count' int with the number of PMNs in that punch
+    - 'Cell Count' int with the number of target cells in that punch
     - 'Cell Names' list of all the cell names that are PMNs
+    - 'Overall Cell Count' The overall number of cells in the sample
     """
     # Ensure name_string ends with "_"
     if not name_string.endswith("_"):
@@ -608,6 +617,8 @@ def matching_cell_list(adata,name_string,cell_type_string):
     cell_type=""
     cell_names=[]
     i=0
+    overall_cell_count=0
+    
      # This variable sets the breakpoint requires >100 failed requests in a row. Note that there are rondom cells throughout the data sets
     j=0
 
@@ -617,6 +628,7 @@ def matching_cell_list(adata,name_string,cell_type_string):
         try: 
             cell_type=adata.obs.loc[test_string, "merged_annot_cluster"]
             j=0
+            overall_cell_count+=1
             if cell_type_string in cell_type:
                 cell_count+=1
                 cell_names.append(f"{name_string}{i}")
@@ -626,7 +638,8 @@ def matching_cell_list(adata,name_string,cell_type_string):
             end=True
     return {
         "Cell Count": cell_count,
-        "Cell Names": cell_names
+        "Cell Names": cell_names,
+        "Overall Cell Count":overall_cell_count
     }
 def nearest_cells_of_particular_type(adata,sample_ID,cell_distance_type):
     """
