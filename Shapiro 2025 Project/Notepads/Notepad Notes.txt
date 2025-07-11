@@ -359,6 +359,38 @@ Post meeting notes: Meeting with Huy went as well as it could have today. Have s
 Candidates or NR and R comparison. 
 R candidates:
 
+[7.8.2025] More than halfway through the last summer of my life
+
+I will be presenting in a bit under 2 weeks. This may come into conflict with my plan to see Evie during this time. I suppose I could leaver earlier or ask to present the next week instead. Now am really feeling the pressure to get tasks completed over the next few weeks. I don't feel close to the level of being ready to present. 
+
+Some work to target for today
+(1) CD8 and Tumor cell interacting and non interacting grouper function
+(2) Rerun significance with 0.1%, 1%, 3% and 5% thresholds (done)
+(3) Review Video that Parth sent
+(4) Find genetic profile of cellular group
+
+
+[7.9.2025] Wednesday
+
+Today would be a good day to do some lit review and determine next directions as well as get my workouts in. I need to cook food for the week as well. I am thinking of chili chicken verde and lasagua, maybe find out how to make cashew chicken. I need a new recipe. 
+
+Post Meeting Notes:
+(1) Look at Dapi/nuclear staining to determine if I can identify nuetrophils
+(2) Make a volcano plot, not quite sure what this means
+(3) Find good candidates for Protein-RNA mapping
+
+
+[7.10.2025]
+
+So disappointing news is that the image data does not appear to provide good evidence of which cells are PMNs on the mRNA samples. This to me will make this mapping all but impossible. The layers are far enough off even in good samples.
+
+The other probably more productive task that I can be doing is gene expression analysis of the protein neutrophils. Figure out what the highly regulated genes are and determine if that makes sense.
+
+
+Tasks:
+(1) Make a generalizable function to plot the average gene expression across cells
+(2) Make a list of markers for PMN cells see how those are plotted
+(3) Maybe do the inverse. What are the expression of CD8 cells near PMN rather than the other way around. If PMN cells are mRNA and protein poor than looking in the other direction may be more helpful. 
 
 
 

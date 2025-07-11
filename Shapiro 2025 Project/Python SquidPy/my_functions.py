@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[10]:
 
 
 get_ipython().system('jupyter nbconvert --to python my_functions.ipynb')
 
 
-# In[1]:
+# In[9]:
 
 
 def create_z_map(adata, tma_num, punch_num, heatmap_printout, radius=-1.0):
@@ -169,7 +169,10 @@ def pmn_counter(adata, name_string):
             end=True
 
     # Calculate the overall percent of PMN cells
-    decimal_pmn=pmn_count/overall_cell_count
+    if overall_cell_count>0:
+        decimal_pmn=pmn_count/overall_cell_count
+    else:
+        decimal_pmn=0
 
     
     return {
@@ -695,4 +698,340 @@ def nearest_cells_of_particular_type(adata,sample_ID,cell_distance_type):
         "Average Distance":overall_avg_distance,
         "Average Mininum Distance": average_min_distance
     }
+
+def get_interaction_status(adata,sample_id, distance_threshold, cell_type_1="CD8+T_cells",cell_type_2="Tumor_cells"):
+    """
+    Classifies PMN cell interactions with two specified cell types (e.g., CD8+ T cells and Tumor cells)
+    based on spatial proximity from a distance matrix.
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data object containing spatial transcriptomics or single-cell data.
+    sample_id : str
+        Identifier for the sample to analyze within `adata`.
+    distance_threshold : float
+        Distance in microns to define interaction (e.g., 20 means a cell is interacting if it's ≤ 20 microns away).
+    cell_type_1 : str, optional
+        First target cell type to assess interaction with (default is "CD8+T_cells").
+    cell_type_2 : str, optional
+        Second target cell type to assess interaction with (default is "Tumor_cells").
+    Returns
+    -------
+    dict
+        A dictionary with one key:
+        - "Interaction Matrix": pandas.DataFrame with:
+            * Boolean columns: 
+              - '{cell_type_1} Interacting'
+              - '{cell_type_2} Interacting'
+            * Categorical column:
+              - 'Interaction_Status' (values: 'Both', '{cell_type_1} only', '{cell_type_2} only', 'Neither')
+    """
+    import pandas as pd
+    
+    # Load distance matrices
+    results_CD8 = nearest_cells_of_particular_type(adata,sample_id, cell_type_1)["Distance Matrix"]
+    results_Tumor = nearest_cells_of_particular_type(adata,sample_id, cell_type_2)["Distance Matrix"]
+    
+    # Set interaction threshold (in microns)
+    threshold = distance_threshold
+    
+    # Initialize result matrix
+    output = pd.DataFrame(index=results_CD8.index)
+    output[f'{cell_type_1} Interacting'] = results_CD8['Minimum Distance'] <= threshold
+    output[f'{cell_type_2} Interacting'] = results_Tumor['Minimum Distance'] <= threshold
+    
+    # Compute interaction status
+    def classify(row):
+        if row[f'{cell_type_1} Interacting'] and row[f'{cell_type_2} Interacting']:
+            return 'Both'
+        elif row[f'{cell_type_1} Interacting']:
+            return f'{cell_type_1} only'
+        elif row[f'{cell_type_2} Interacting']:
+            return f'{cell_type_2} only'
+        else:
+            return 'Neither'
+    
+    output['Interaction_Status'] = output.apply(classify, axis=1)
+
+    return{
+        "Interaction Matrix":output
+    }
+
+def plot_interaction_status_pie(interaction_matrix, title = "PMN Interaction Status Distribution"):
+    """
+    Plots a pie chart of PMN cell interaction status counts.
+    Parameters
+    ----------
+    interaction_matrix : pandas.DataFrame
+        The output DataFrame from `get_interaction_status()["Interaction Matrix"]` that contains 
+        the 'Interaction_Status' column.
+    title : str, optional
+        Title for the pie chart (default is "PMN Interaction Status Distribution").
+    Returns
+    -------
+    None
+        Displays the pie chart using matplotlib.
+    """
+    import matplotlib.pyplot as plt
+    
+    # Count the frequency of each interaction status
+    status_counts = interaction_matrix['Interaction_Status'].value_counts()
+
+    # Define colors (optional customization)
+    colors = {
+        'Both': '#1f77b4',
+        'CD8+T_cells only': '#2ca02c',
+        'Tumor_cells only': '#d62728',
+        'Neither': '#7f7f7f'
+    }
+
+    # Match colors to present statuses
+    status_colors = [colors.get(status, '#cccccc') for status in status_counts.index]
+
+    # Plot pie chart
+    plt.figure(figsize=(6, 6))
+    plt.pie(
+        status_counts,
+        labels=status_counts.index,
+        autopct='%1.1f%%',
+        startangle=140,
+        colors=status_colors
+    )
+    plt.title(title)
+    plt.axis('equal')  # Equal aspect ratio for a perfect circle
+    plt.show()
+
+def get_interaction_status_v2(adata, sample_id, distance_threshold, target_cell_type, cell_type_1="Neutrophil", cell_type_2="NA"):
+    """
+    Determine whether a particular cell group is interacting with one or two other cell groups.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data object with spatial transcriptomics or single-cell data.
+    sample_id : str
+        Identifier for the sample to analyze within `adata`.
+    distance_threshold : float
+        Distance in microns to define interaction.
+    target_cell_type : str
+        Cell type to check interactions for.
+    cell_type_1 : str, optional
+        First target cell type to assess interaction with (default: "Neutrophil").
+    cell_type_2 : str, optional
+        Second target cell type to assess interaction with (default: "NA").
+
+    Returns
+    -------
+    dict
+        Contains:
+        - "Interaction Matrix": pandas.DataFrame with interaction booleans and status labels.
+    """
+    import pandas as pd
+
+    # Get distance matrix for cell_type_1
+    results_1 = nearest_cells_of_particular_type_v2(adata, sample_id, target_cell_type, cell_type_1)["Distance Matrix"]
+    threshold = distance_threshold
+
+    output = pd.DataFrame(index=results_1.index)
+    output[f'{cell_type_1} Interacting'] = results_1['Minimum Distance'] <= threshold
+
+    if cell_type_2 != "NA":
+        # Get distance matrix for cell_type_2
+        results_2 = nearest_cells_of_particular_type_v2(adata, sample_id, target_cell_type, cell_type_2)["Distance Matrix"]
+        output[f'{cell_type_2} Interacting'] = results_2['Minimum Distance'] <= threshold
+
+        # Classify into four categories
+        def classify(row):
+            if row[f'{cell_type_1} Interacting'] and row[f'{cell_type_2} Interacting']:
+                return 'Both'
+            elif row[f'{cell_type_1} Interacting']:
+                return f'{cell_type_1} only'
+            elif row[f'{cell_type_2} Interacting']:
+                return f'{cell_type_2} only'
+            else:
+                return 'Neither'
+    else:
+        # Classify into two categories
+        def classify(row):
+            if row[f'{cell_type_1} Interacting']:
+                return 'Interacting'
+            else:
+                return 'Not Interacting'
+
+    output['Interaction_Status'] = output.apply(classify, axis=1)
+
+    return {
+        "Interaction Matrix": output
+    }
+def nearest_cells_of_particular_type_v2(adata,sample_ID,orgin_cell_type,cell_distance_type):
+    """
+    Calculates distance matrix between PMNs and target cells of a particular type,
+    along with summary statistics.
+
+    Parameters:
+    -----------
+    adata : AnnData
+        Annotated data object containing spatial information for cells.
+    sample_ID : str
+        Identifier for the specific sample to analyze.
+    orgin_cell_type : str
+        The string name of the orgin cell specified. This will mostly commonly be neutrophils
+    cell_distance_type : str
+        Cell type to use as the target for distance calculations (e.g., "CD4+T_cells").
+
+    Returns:
+    --------
+    dict
+        A dictionary containing:
+        - 'Distance Matrix' (pd.DataFrame): Matrix of distances between orgin and target cells,
+          including additional columns for 'Minimum Distance' and 'Average Distance' per orging cell.
+        - 'Average Distance' (float): Overall average distance across the entire matrix.
+        - 'Average Mininum Distance' (float): Average of each orgin cell's minimum distance to target cells.
+    """
+    import pandas as pd
+
+    # Creates lists of cell types for PMN and the target comparison
+    orgin_cell_type_list=matching_cell_list(adata,sample_ID,orgin_cell_type)['Cell Names']
+    target_cell_list=matching_cell_list(adata,sample_ID,cell_distance_type)['Cell Names']
+    
+    # Initialize results storage: one column for this cell type
+    distance_matrix = pd.DataFrame(index=orgin_cell_type_list, columns=target_cell_list)
+    
+    for pmn in orgin_cell_type_list:
+        for target_cell in target_cell_list:
+            distance_matrix.loc[pmn,target_cell]=find_distance(adata,pmn, target_cell)["Distance um"]
+    
+    # Ensure numeric types
+    distance_matrix = distance_matrix.apply(pd.to_numeric, errors='coerce')
+    
+    # Calculate overall average distance across entire matrix
+    overall_avg_distance = distance_matrix.mean().mean()
+
+    # Calculate average mininum distance
+    average_min_distance = distance_matrix.min(axis=1).mean()
+            
+    # Add columns first (unrounded)
+    distance_matrix['Minimum Distance'] = distance_matrix.min(axis=1).round(2)
+    distance_matrix['Average Distance'] = distance_matrix.mean(axis=1).round(2)
+    
+    return{
+        "Distance Matrix":distance_matrix,
+        "Average Distance":overall_avg_distance,
+        "Average Mininum Distance": average_min_distance
+    }
+
+def plot_interaction_status_pie_v2(interaction_matrix, title = "PMN Interaction Status Distribution"):
+    """
+    Plots a pie chart of PMN cell interaction status counts.
+    Parameters
+    ----------
+    interaction_matrix : pandas.DataFrame
+        The output DataFrame from `get_interaction_status()["Interaction Matrix"]` that contains 
+        the 'Interaction_Status' column.
+    title : str, optional
+        Title for the pie chart (default is "PMN Interaction Status Distribution").
+    Returns
+    -------
+    None
+        Displays the pie chart using matplotlib.
+    """
+    import matplotlib.pyplot as plt
+    
+    # Count the frequency of each interaction status
+    status_counts = interaction_matrix['Interaction_Status'].value_counts()
+
+    # Plot pie chart
+    plt.figure(figsize=(6, 6))
+    plt.pie(
+        status_counts,
+        labels=status_counts.index,
+        autopct='%1.1f%%',
+        startangle=140
+    )
+    plt.title(title)
+    plt.axis('equal')  # Equal aspect ratio for a perfect circle
+    plt.show()
+
+def plot_grouped_protein_heatmap(adata, interaction_matrix, protein_layer=None,
+                                  title="Protein Expression by Interaction Group",
+                                  group_order=None, vmax=8):
+    """
+    Plots a heatmap of average protein expression across interaction groups,
+    including cell counts in row labels.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data object containing protein expression data (in `.X` or a `.layers[]` slot).
+
+    interaction_matrix : pandas.DataFrame
+        Output of get_interaction_status()["Interaction Matrix"], must have 'Interaction_Status'.
+
+    protein_layer : str or None, optional
+        If provided, uses adata.layers[protein_layer] for protein expression.
+        If None, uses adata.X.
+
+    title : str
+        Title of the heatmap plot.
+
+    group_order : list of str, optional
+        Custom ordering of interaction groups. If None, groups will be sorted alphabetically.
+
+    vmax : float, optional
+        Max value for color scale (default: 8).
+
+    Returns
+    -------
+    None
+        Displays the heatmap.
+    """
+
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    
+    # Align AnnData with interaction matrix
+    adata_subset = adata[interaction_matrix.index].copy()
+    adata_subset.obs['Interaction_Status'] = interaction_matrix['Interaction_Status']
+
+    # Get expression matrix
+    expr = adata_subset.layers[protein_layer] if protein_layer else adata_subset.X
+    expr_df = pd.DataFrame(
+        expr.toarray() if hasattr(expr, 'toarray') else expr,
+        index=adata_subset.obs_names,
+        columns=adata_subset.var_names
+    )
+    expr_df['Interaction_Status'] = adata_subset.obs['Interaction_Status']
+
+    # Count cells per group
+    group_counts = expr_df['Interaction_Status'].value_counts()
+
+    # Group and average expression
+    grouped_expr = expr_df.groupby('Interaction_Status').mean()
+
+    # Rename rows to include counts
+    new_index = [
+        f"{group} (n={group_counts[group]})"
+        for group in grouped_expr.index
+    ]
+    grouped_expr.index = new_index
+
+    # Apply custom order (with counts)
+    if group_order:
+        # Map raw group names to their labeled form
+        order_with_counts = [
+            f"{g} (n={group_counts[g]})" for g in group_order if g in group_counts
+        ]
+        grouped_expr = grouped_expr.reindex(order_with_counts)
+    else:
+        grouped_expr = grouped_expr.sort_index()
+
+    # Plot heatmap
+    plt.figure(figsize=(max(10, len(grouped_expr.columns) * 0.5), len(grouped_expr) * 0.6 + 2))
+    sns.heatmap(grouped_expr, cmap="viridis", annot=True, vmin=0, vmax=vmax)
+    plt.title(title)
+    plt.ylabel('Interaction Group')
+    plt.xlabel('Protein Marker')
+    plt.tight_layout()
+    plt.show()
 
