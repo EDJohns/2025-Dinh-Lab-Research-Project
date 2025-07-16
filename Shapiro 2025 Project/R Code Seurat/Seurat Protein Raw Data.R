@@ -54,3 +54,5 @@ rownames(seurat_object_raw[["negprobes"]])
 #Showing expression data
 GetAssayData(seurat_object_raw, assay = "RNA", layer = "counts")[1:15, 1:15]
 GetAssayData(seurat_object_athena, assay = "Protein", layer = "counts")[1:15, 1:15]
+
+#############
