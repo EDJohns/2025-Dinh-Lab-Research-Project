@@ -393,4 +393,43 @@ Tasks:
 (3) Maybe do the inverse. What are the expression of CD8 cells near PMN rather than the other way around. If PMN cells are mRNA and protein poor than looking in the other direction may be more helpful. 
 
 
+[7.16.2025]
 
+Volcano plot analysis. In a volcano plot it is statistical significance
+Y_axis: stat significance (log p value). Log function is used to make the low (and significant P values appear high). 
+
+https://www.youtube.com/watch?v=7aWAdw2jhj0
+* some good visuals in this video
+
+X_axis: Full change. Ration between the two groups. Expression of gene X in condiction A/condiction B
+* >0 means A is more significant 
+* <0 means B is more significant
+* nears zero is roughly the same
+* Typically also a log function 
+
+(1) Average by Sample
+(2) Box Plot the results
+(3) Wilcox Significance Test
+
+[7.17.25] Prove that I can work well remotely. Starting actual work at 11AM after not getting alot done on the bus. Lots of work to make up. thanks for AI to help with coding which speeds things up alot. Also need to start prepping for Lab Meeting.
+
+
+(1) Average by sample plot (done)
+(2) Box plot of sample averages for gene expression (done)
+(3) Wilcox Significance for gene expression in the box plots (done)
+(4) Volcano plot of gene expression between responders and non responder. (done)
+(5) Review Angie's Paper
+
+(1) Start putting some slides for presentation. (1) methodology for colocalization
+
+
+[7.18.2025] Friday Times
+
+I have a presentation to do on Tuesday. Not 100% sure what to expect there. So far my findings on the gene analysis have not given much fruit. I think there are two main ways forward on gene analysis. (1) In protein analysis switch to single PMNs rather than averaging each sample. This would give far greater statistical power (2) comparing gene expression of Treg and CD8 between NR and R cells in the mRNA. 
+
+
+Tasks for today
+(1) Review the papers (done)
+(2) Review Path Video (done)
+(3) Recheck colocalization data on CD8-Neutrophil interactions. Why do I see colocalization greater in NR when responders PMNs are more likely to interact. 
+(4) Review Athena Paper

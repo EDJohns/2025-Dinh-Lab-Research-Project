@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[10]:
+# In[3]:
 
 
 get_ipython().system('jupyter nbconvert --to python my_functions.ipynb')
 
 
-# In[9]:
+# In[2]:
 
 
 def create_z_map(adata, tma_num, punch_num, heatmap_printout, radius=-1.0):
@@ -639,10 +639,18 @@ def matching_cell_list(adata,name_string,cell_type_string):
            j+=1
         if j>100: 
             end=True
+
+    # Calculate the overall percent of targeted cells
+    if overall_cell_count>0:
+        decimal_count=cell_count/overall_cell_count
+    else:
+        decimal_count=0
+    
     return {
         "Cell Count": cell_count,
         "Cell Names": cell_names,
-        "Overall Cell Count":overall_cell_count
+        "Overall Cell Count":overall_cell_count,
+        "Decimal Count": decimal_count
     }
 def nearest_cells_of_particular_type(adata,sample_ID,cell_distance_type):
     """
