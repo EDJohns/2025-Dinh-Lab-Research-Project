@@ -690,8 +690,9 @@ test <- freq_plot(SEU = CosMX_RNA_merged,
 ```
 
 ```{r S1E--CosMx protein/RNA cell type freq correlation WITH TUMOR CELLs}
-load("C:\\Users\\ejohns\\Documents\\GitHub\\2025-Dinh-Lab-Research-Project\\Shapiro 2025 Project\\Athena R Data Files\\CosMX_RNA_merged.rda")
-load("C:\\Users\\ejohns\\Documents\\GitHub\\2025-Dinh-Lab-Research-Project\\Shapiro 2025 Project\\Athena R Data Files\\CosMX_protein_annot_cluster.rda")
+load("C:\\Users\\evanj\\OneDrive\\Documents\\Shapiro Data Files\\Rstudio RDA Files\\CosMX_RNA_merged.rda")
+
+load("C:\\Users\\evanj\\OneDrive\\Documents\\Shapiro Data Files\\Rstudio RDA Files\\CosMX_protein_annot_cluster.rda")
 
 
 color_clusters <- c("#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72", "#B17BA6", "#FF7F00", "#FDB462", 
