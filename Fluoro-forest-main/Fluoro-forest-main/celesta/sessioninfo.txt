@@ -1,0 +1,18 @@
+R version 4.0.3 (2020-10-10)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Big Sur 10.16
+
+Matrix products: default
+LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] zeallot_0.1.0      spdep_1.1-7        sf_0.9-8           spData_0.3.8       sp_2.1-1           Rmixmod_2.1.6      Rcpp_1.0.11       
+ [8] forcats_1.0.0      stringr_1.5.1      purrr_1.0.2        readr_2.1.2        tidyr_1.2.0        tibble_3.1.6       tidyverse_1.3.1   
+[15] CELESTA_0.0.0.9000 data.table_1.14.0  gridExtra_2.3      ggplot2_3.4.0      dplyr_1.0.8       
+

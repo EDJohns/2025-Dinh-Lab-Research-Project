@@ -144,11 +144,6 @@ if (!all_correct) {
 }
 
 
-
-
-
-
-
 meta_rna_aggregated <- meta_rna_aggregated %>%
   mutate(Var1 = case_when(
     Var1 == "Bcells" ~ "B_cells",
@@ -448,4 +443,62 @@ ggplot(filtered_data2, aes(x=Aggregated_Percentage, y=Percentage, color = Var1.x
     legend.text = element_text(size = 12),  # Larger legend text
     legend.key.size = unit(1, "cm"),  # Larger legend keys
     plot.title = element_text(size = 18, face = "bold", hjust = 0.5)  # Larger, centered title
+  )
+
+######################### Immune Cells Only #################  
+
+allowed_types <- c("B_cells", "CD4+T_cells", "CD8+T_cells", "DCs", "Tregs", "Plasma_cells", "Monocytes","Macrophages")
+
+filtered_data3 <- all_data %>%
+  filter(
+    grepl("TMA_C", group),                 # keep rows where group contains only certain core (ex TMA_C) but TMA will include all
+    Var1.x != "Tumor_cells",               # exclude rows where Var1.x is "Tumor_cells"
+    Var1.x %in% allowed_types              # only include the specified cell types
+  )
+
+ggplot(filtered_data3, aes(x=Aggregated_Percentage, y=Percentage, color = Var1.x)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE, color = "grey", linetype = "dashed") +
+  stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               formula = y ~ x, parse = TRUE, color = "black") +
+  theme_classic() + 
+  xlab('Cell Type Percentage by FOV in CosMx RNA data') + 
+  ylab('Cell Type Percentage by FOV in CosMx Protein data') +
+  scale_color_manual(values = color_clusters) +
+  labs(color = "Cell Type") +
+  ggtitle('TMA C Immune Only - Cell type frequency per FOV by dataset') +
+  theme(
+    axis.title = element_text(size = 16, face = "bold"),  # Larger axis labels
+    axis.text = element_text(size = 14),  # Larger axis text
+    legend.title = element_text(size = 14, face = "bold"),  # Larger legend title
+    legend.text = element_text(size = 12),  # Larger legend text
+    legend.key.size = unit(1, "cm"),  # Larger legend keys
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5)  # Larger, centered title
+  )
+
+ggplot(filtered_data3, aes(x = Aggregated_Percentage, y = Percentage, color = TMA_Group)) +
+  geom_point(size = 3, alpha = 0.8) + 
+  geom_smooth(method = "lm", se = FALSE, aes(color = TMA_Group), linetype = "dashed") +
+  stat_poly_eq(
+    aes(
+      label = paste(..eq.label.., ..rr.label.., ..p.value.label.., sep = "~~~"),
+      color = TMA_Group
+    ), 
+    formula = y ~ x,
+    parse = TRUE,
+    show.legend = FALSE
+  ) +
+  theme_classic() + 
+  xlab('Immune Cell Percentage by FOV in CosMx RNA data') + 
+  ylab('Immune Cell Percentage by FOV in CosMx Protein data') +
+  scale_color_manual(values = c("TMA_A" = "#1b9e77", "TMA_B" = "#d95f02", "TMA_C" = "#7570b3")) +
+  labs(color = "TMA Group") +
+  ggtitle('Immune Cells Only - Cell type frequency per FOV (TMA A, B, C)') +
+  theme(
+    axis.title = element_text(size = 16, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12),
+    legend.key.size = unit(1, "cm"),
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5)
   )

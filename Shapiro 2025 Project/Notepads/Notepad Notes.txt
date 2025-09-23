@@ -433,3 +433,70 @@ Tasks for today
 (2) Review Path Video (done)
 (3) Recheck colocalization data on CD8-Neutrophil interactions. Why do I see colocalization greater in NR when responders PMNs are more likely to interact. 
 (4) Review Athena Paper
+
+
+[7.25.2025]
+
+Seems like some of the commits that I am sure that I did are not showing on my end which sucks. So I am missing my meeting notes with Huy. 
+
+Things that I remember:
+(1) Compare mRNA expression between suspected PMN clusters and the rest of the cells
+(1a) Rectangle makers to make list of cells to compare
+(2) Look more into Athena's models to see if comparison holds up
+(3) Refine list of good mappings
+
+
+
+Things to do
+(1) Load mRNA cutdown files into python
+(2) Do random assignment comparison to see if results disappear 
+
+
+Ok to lay out a plan. It will be usefult in general to study the mRNA data for a variety to reasons. I want to create a heatmap to compare suspected PMN locations cells to the expression of the overall sample. (1) I will create a function to find the cell id list of cells within a rectangle. (2) Create a list of genes that may be significant in that list ~20 for heatmap) (3) Create a function to find the overall expression minus the rectangles (4) compare heatmaps. (5) Maybe add a more general function to find significant differences. Will use a list of good canidate with lots of PMN cells. 
+
+
+[7.28.25] Gonna have to a fast finish this Monday
+
+Slow start not as productive as yesterday. Good news is that I might be able to get the date switched. 
+
+Some tasks to work on:
+(1) meet with Huy, Parth Athena
+(2) setup meeting with parth to apply his model to my data
+(3) Mapping protein to mRNA
+(4) Responder vs non responder CD8, Treg gene expression in mRNA data. Possible results of the colocalization
+(5) Check Athena's grapths in the data 
+
+Meeting notes (Huy, Parth, Athena, Evan)
+
+Parth work last Friday 
+
+- Need to compute the area of each sample. Do a dot plot to determine if the mRNA is larger than the protein on average.
+
+[7.29.25] Things to do this morning
+
+(1) Compare expression of CD8 and Treg in mRNA between responders and non responders. May be worth looking at localization scores
+(2) Run Athena's plot but only for TMAC, or other cutdown group (done)
+(3) Review the paper parth sent to do gene comparison in mRNA
+
+[7.30.25] Running out of food, running out of time
+
+Some things to look at today
+(1) Ligand receptor pairs
+(2) Review Athena's paper
+(3) Make mRNA plotter
+
+[7.31.25] Finishing Touches
+
+Some final projects to work on to finish out this summer.
+(1) Mapping the mRNA to protein in terms of exact location
+(1a) Plot mRNA spatially
+(1b) Find way to line up the plots
+(2) Spatial L-R plots
+(2a) gene expression binary (express or not) with expressor cell type only being expression. Same for the receptor ligrand. For example plot with DCs expressing L gene and CD8 with receptor. 
+(2b) run colocalization tests
+
+[8.4.2025] Post meeting notes
+
+(1) Update plot to plot off the centroid or other method
+(2) Plot immune cells
+(3) Colocalization analysis

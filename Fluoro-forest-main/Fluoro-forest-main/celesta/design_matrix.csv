@@ -1,0 +1,12 @@
+,Lineage_level,DAPI_Cell_Mean,Ki67_Cell_Mean,CD31_Cell_Mean,FOXP3_Cell_Mean,CD56_Cell_Mean,CD34_Cell_Mean,CD4_Cell_Mean,CD20_Cell_Mean,CD45_Cell_Mean,CD163_Cell_Mean,HLA.A_Cell_Mean,LAG3_Cell_Mean,CD8_Cell_Mean,SMA_Cell_Mean,PDL1_Cell_Mean,CD21_Cell_Mean,Pan.Cytokeratin_Cell_Mean,IDO1_Cell_Mean,b.Catenin1_Cell_Mean,CD14_Cell_Mean,PD.1_Cell_Mean,CD44_Cell_Mean,CD3e_Cell_Mean,CD45RO_Cell_Mean,CD68_Cell_Mean,Granzyme.B_Cell_Mean,HLA.DR_Cell_Mean,ICOS_Cell_Mean,HIF1A_Cell_Mean,CK17_Cell_Mean
+endothelia,1_0_1,NA,NA,1,0,0,NA,0,0,0,0,NA,0,0,0,0,0,0,0,0,0,0,NA,0,0,0,0,0,0,0,0
+immune,1_0_2,NA,NA,0,NA,NA,0,NA,NA,1,NA,NA,NA,NA,0,NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0
+stroma,1_0_3,NA,NA,0,0,0,NA,0,0,0,0,NA,0,0,1,0,0,0,0,0,0,0,NA,0,0,0,0,0,0,0,0
+epithelia,1_0_4,NA,NA,0,0,0,0,0,0,0,0,NA,0,0,0,NA,0,1,NA,NA,0,0,NA,0,0,0,0,0,0,NA,NA
+myeloid,2_2_5,NA,NA,0,0,0,0,NA,0,1,NA,NA,0,0,0,NA,NA,NA,NA,0,NA,0,NA,0,0,1,0,NA,NA,NA,0
+Bcells,2_2_6,NA,NA,0,0,0,0,0,1,1,0,NA,0,0,0,NA,NA,NA,0,0,0,0,NA,0,0,0,0,NA,NA,NA,0
+NKcells,2_2_7,NA,NA,0,0,1,0,0,0,1,0,NA,NA,NA,0,NA,NA,NA,0,0,0,NA,NA,0,NA,0,NA,0,0,NA,0
+T_cells,2_2_8,NA,NA,0,NA,0,0,NA,0,1,0,NA,NA,NA,0,NA,0,0,0,0,0,NA,NA,1,NA,0,NA,0,NA,NA,0
+CD4_T,3_8_9,NA,NA,0,NA,0,0,1,0,1,0,NA,NA,0,0,NA,0,0,0,0,0,NA,NA,1,NA,0,0,0,NA,NA,0
+CD8_T,3_8_10,NA,NA,0,0,NA,0,0,0,1,0,NA,NA,1,0,NA,0,0,0,0,0,NA,NA,1,NA,0,NA,0,NA,NA,0
+Treg,3_8_11,NA,NA,0,1,0,0,1,0,1,0,NA,NA,0,0,NA,0,0,0,0,0,NA,NA,1,NA,0,0,0,NA,NA,0
