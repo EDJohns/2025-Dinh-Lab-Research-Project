@@ -2,7 +2,7 @@ import io
 import sys
 import math
 import numpy as np
-import qdarktheme
+#import qdarktheme
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -124,7 +124,8 @@ class CellAnnotationWidget(QWidget):
 # loop of widget, calls main app
 def annotation_loop(core_instance, show_markers, cell_types = None):
     app = QApplication.instance() or QApplication([])
-    app.setStyleSheet(qdarktheme.load_stylesheet())
+    #app.setStyleSheet(qdarktheme.load_stylesheet())
+    app.setStyleSheet("Fusion")  # built-in style
     widget = CellAnnotationWidget(core_instance.sampled_cells, cell_types = cell_types)
 
     def on_cell_changed(cell_id):
